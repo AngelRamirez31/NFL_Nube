@@ -3,8 +3,6 @@ using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates.Tests.Fakes;
 
-// Fake para que PERSONA 4 pueda probar Matches
-// sin esperar al GroupRepository real de PERSONA 3.
 public class FakeGroupRepository : IGroupRepository
 {
     private readonly List<Group> _groups = new()
@@ -14,9 +12,17 @@ public class FakeGroupRepository : IGroupRepository
             Id = "group-1",
             Name = "Group A",
             TournamentId = "tournament-1",
-            // Los mismos equipos que FakeTeamRepository: sin esto, crear un
-            // partido siempre daría 422 "team doesn't belong to tournament".
-            Teams =
+            Teams = new List<Team>()
+        },
+        // Grupo con equipos ya asignados, para los tests de Matches: crear un
+        // partido exige que ambos equipos pertenezcan a un grupo del torneo.
+        // Va aparte de group-1 para no alterar el fixture que usan los de Groups.
+        new Group
+        {
+            Id = "group-with-teams",
+            Name = "Group B",
+            TournamentId = "tournament-1",
+            Teams = new List<Team>
             {
                 new Team { Id = "team-1", Name = "Eagles" },
                 new Team { Id = "team-2", Name = "Cowboys" }
@@ -24,27 +30,85 @@ public class FakeGroupRepository : IGroupRepository
         }
     };
 
-    public Task<IReadOnlyList<Group>> GetByTournamentAsync(string tournamentId) =>
-        Task.FromResult<IReadOnlyList<Group>>(_groups.Where(g => g.TournamentId == tournamentId).ToList());
+    public Task<IReadOnlyList<Group>> GetByTournamentAsync(
+        string tournamentId)
+    {
+        IReadOnlyList<Group> groups = _groups
+            .Where(g => g.TournamentId == tournamentId)
+            .ToList();
 
-    public Task<Group?> GetByIdAsync(string tournamentId, string groupId) =>
-        Task.FromResult(_groups.FirstOrDefault(g => g.Id == groupId && g.TournamentId == tournamentId));
+        return Task.FromResult(groups);
+    }
+
+    public Task<Group?> GetByIdAsync(
+        string tournamentId,
+        string groupId)
+    {
+        var group = _groups.FirstOrDefault(g =>
+            g.Id == groupId &&
+            g.TournamentId == tournamentId);
+
+        return Task.FromResult(group);
+    }
 
     public Task<Group> CreateAsync(Group group)
     {
         group.Id = Guid.NewGuid().ToString();
+        group.Teams ??= new List<Team>();
+
         _groups.Add(group);
+
         return Task.FromResult(group);
     }
 
-    public Task<Group?> UpdateAsync(string groupId, Group group) => Task.FromResult<Group?>(null);
+    public Task<Group?> UpdateAsync(
+        string groupId,
+        Group group)
+    {
+        var index = _groups.FindIndex(g => g.Id == groupId);
 
-    public Task<bool> DeleteAsync(string groupId) => Task.FromResult(false);
+        if (index < 0)
+            return Task.FromResult<Group?>(null);
 
-    public Task<bool> ExistsByNameInTournamentAsync(string tournamentId, string name) =>
-        Task.FromResult(_groups.Any(g => g.TournamentId == tournamentId && g.Name == name));
+        group.Id = groupId;
+        group.Teams ??= new List<Team>();
 
-    public Task<Group?> FindByTournamentAndTeamAsync(string tournamentId, string teamId) =>
-        Task.FromResult(_groups.FirstOrDefault(g =>
-            g.TournamentId == tournamentId && g.Teams.Any(t => t.Id == teamId)));
+        _groups[index] = group;
+
+        return Task.FromResult<Group?>(group);
+    }
+
+    public Task<bool> DeleteAsync(string groupId)
+    {
+        var group = _groups.FirstOrDefault(g => g.Id == groupId);
+
+        if (group is null)
+            return Task.FromResult(false);
+
+        _groups.Remove(group);
+
+        return Task.FromResult(true);
+    }
+
+    public Task<bool> ExistsByNameInTournamentAsync(
+        string tournamentId,
+        string name)
+    {
+        var exists = _groups.Any(g =>
+            g.TournamentId == tournamentId &&
+            g.Name == name);
+
+        return Task.FromResult(exists);
+    }
+
+    public Task<Group?> FindByTournamentAndTeamAsync(
+        string tournamentId,
+        string teamId)
+    {
+        var group = _groups.FirstOrDefault(g =>
+            g.TournamentId == tournamentId &&
+            g.Teams.Any(t => t.Id == teamId));
+
+        return Task.FromResult(group);
+    }
 }
