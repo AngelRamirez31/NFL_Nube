@@ -5,14 +5,6 @@ using TournamentServices.Domain;
 
 namespace TournamentServices.Api.Routes;
 
-// ============================================================
-// PERSONA 1 — Teams
-// Esta es la ÚNICA ruta ya resuelta de punta a punta, para que sirva
-// de ejemplo del patrón que deben seguir Tournament/Group/MatchRoutes:
-// Ids.IsValid -> 400, delegate devuelve Result<T>, .ToHttp()/.ToCreatedHttp()/
-// .ToNoContentHttp() traduce a la respuesta HTTP, ValidationFilter<T> valida
-// el body antes de llegar al handler.
-// ============================================================
 public static class TeamRoutes
 {
     public static void MapTeamRoutes(this WebApplication app)

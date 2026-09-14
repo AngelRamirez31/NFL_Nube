@@ -5,9 +5,6 @@ using Xunit;
 
 namespace TournamentServices.Api.Tests;
 
-// PERSONA 1 — ejemplo de test de integración end-to-end (levanta la API en
-// memoria contra ApiFactory, sin Postgres). Persona 2/3/4: copien este
-// patrón para TournamentRoutesTests, GroupRoutesTests, MatchRoutesTests.
 public class TeamRoutesTests : IClassFixture<ApiFactory>
 {
     private readonly HttpClient _client;
@@ -28,7 +25,7 @@ public class TeamRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateTeam_ThenGetById_ReturnsCreatedTeam()
     {
-        var createResponse = await _client.PostAsJsonAsync("/teams", new CreateTeamDto("Eagles"));
+        var createResponse = await _client.PostAsJsonAsync("/teams", new CreateTeamDto("Patriots"));
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
         var location = createResponse.Headers.Location!.ToString();
@@ -40,7 +37,7 @@ public class TeamRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task GetTeamById_WithInvalidFormat_ReturnsBadRequest()
     {
-        var response = await _client.GetAsync("/teams/invalid#id!");
+        var response = await  _client.GetAsync("/teams/invalid_id");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -53,5 +50,4 @@ public class TeamRoutesTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    // TODO: PERSONA 1 — completar según la tabla "Required Test Cases per Endpoint" (Teams) del contrato.
 }

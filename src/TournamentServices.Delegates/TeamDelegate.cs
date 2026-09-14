@@ -5,14 +5,6 @@ using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates;
 
-// ============================================================
-// PERSONA 1 — Teams
-// Implementación real con Result<T>. Es el MODELO que Personas 2, 3 y 4
-// copian para Tournament/Group/MatchDelegate.
-//
-// Regla de "nombre duplicado" -> 400 (Result.Invalid), según la tabla
-// "Mínimos por persona" del plan (Teams es distinto a Groups: Groups usa 422).
-// ============================================================
 public class TeamDelegate : ITeamDelegate
 {
     private readonly ITeamRepository _teamRepository;

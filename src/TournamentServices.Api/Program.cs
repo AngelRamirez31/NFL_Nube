@@ -8,25 +8,10 @@ using TournamentServices.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ------------------------------------------------------------
-// Postgres — requiere que la BD esté levantada (ver README/Paso 0:
-// Podman + database/db_script.sql + database/002_matches_index.sql).
-// La cadena de conexión vive en appsettings.Development.json.
-// ------------------------------------------------------------
 builder.Services.AddNpgsqlDataSource(
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Falta ConnectionStrings:DefaultConnection en appsettings.*.json"));
 
-// ------------------------------------------------------------
-// Dependency Injection — SIEMPRE apunta a las implementaciones REALES aquí.
-//
-// Los repos/delegates de Tournaments/Groups/Matches empiezan lanzando
-// NotImplementedException; eso es normal hasta que cada quien los complete.
-//
-// NO registres los *Fake* (movidos a tests/TournamentServices.Delegates.Tests/Fakes)
-// en este archivo compartido: son solo para tests aislados (Moq o
-// WebApplicationFactory.ConfigureTestServices), nunca para `dotnet run`.
-// ------------------------------------------------------------
 builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 builder.Services.AddScoped<ITeamDelegate, TeamDelegate>();
 
