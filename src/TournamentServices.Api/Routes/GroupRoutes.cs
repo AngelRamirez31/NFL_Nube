@@ -1,66 +1,146 @@
 using TournamentServices.Api.Common;
 using TournamentServices.Api.Dtos;
 using TournamentServices.Delegates;
+using TournamentServices.Domain;
 
 namespace TournamentServices.Api.Routes;
 
-// ============================================================
-// PERSONA 3 — Groups
-// Sigue el patrón de TeamRoutes.cs (Result<T> + .ToHttp()/.ToCreatedHttp()/
-// .ToNoContentHttp()).
-// ============================================================
 public static class GroupRoutes
 {
     public static void MapGroupRoutes(this WebApplication app)
     {
-        var group = app.MapGroup("/tournaments/{tournamentId}/groups").WithTags("Groups");
+        var group = app
+            .MapGroup("/tournaments/{tournamentId}/groups")
+            .WithTags("Groups");
 
-        group.MapGet("/", async (string tournamentId, IGroupDelegate groupDelegate) =>
+        group.MapGet("/", async (
+            string tournamentId,
+            IGroupDelegate groupDelegate) =>
         {
-            var result = await groupDelegate.GetByTournamentAsync(tournamentId);
-            return result.ToHttp(groups => groups); // TODO: PERSONA 3 -> .Select(ToDto)
+            if (!Ids.IsValid(tournamentId))
+                return Results.BadRequest();
+
+            var result =
+                await groupDelegate.GetByTournamentAsync(tournamentId);
+
+            return result.ToHttp(groups =>
+                groups.Select(ToDto));
         });
 
-        group.MapGet("/{groupId}", async (string tournamentId, string groupId, IGroupDelegate groupDelegate) =>
+        group.MapGet("/{groupId}", async (
+            string tournamentId,
+            string groupId,
+            IGroupDelegate groupDelegate) =>
         {
-            if (!Ids.IsValid(groupId)) return Results.BadRequest();
+            if (!Ids.IsValid(tournamentId) ||
+                !Ids.IsValid(groupId))
+            {
+                return Results.BadRequest();
+            }
 
-            var result = await groupDelegate.GetByIdAsync(tournamentId, groupId);
-            return result.ToHttp(g => g); // TODO: PERSONA 3 -> ToDto
+            var result =
+                await groupDelegate.GetByIdAsync(
+                    tournamentId,
+                    groupId);
+
+            return result.ToHttp(ToDto);
         });
 
-        group.MapPost("/", async (string tournamentId, CreateGroupDto dto, IGroupDelegate groupDelegate) =>
+        group.MapPost("/", async (
+            string tournamentId,
+            CreateGroupDto dto,
+            IGroupDelegate groupDelegate) =>
         {
-            var result = await groupDelegate.CreateAsync(tournamentId, dto.Name);
-            return result.ToCreatedHttp(g => $"/tournaments/{tournamentId}/groups/{g.Id}", g => g); // TODO: ToDto
+            if (!Ids.IsValid(tournamentId))
+                return Results.BadRequest();
+
+            var result =
+                await groupDelegate.CreateAsync(
+                    tournamentId,
+                    dto.Name);
+
+            return result.ToCreatedHttp(
+                created =>
+                    $"/tournaments/{tournamentId}/groups/{created.Id}",
+                ToDto);
         })
         .AddEndpointFilter<ValidationFilter<CreateGroupDto>>();
 
-        group.MapPut("/{groupId}", async (string tournamentId, string groupId, UpdateGroupDto dto, IGroupDelegate groupDelegate) =>
+        group.MapPut("/{groupId}", async (
+            string tournamentId,
+            string groupId,
+            UpdateGroupDto dto,
+            IGroupDelegate groupDelegate) =>
         {
-            if (!Ids.IsValid(groupId)) return Results.BadRequest();
+            if (!Ids.IsValid(tournamentId) ||
+                !Ids.IsValid(groupId))
+            {
+                return Results.BadRequest();
+            }
 
-            var result = await groupDelegate.UpdateAsync(tournamentId, groupId, dto.Name);
-            return result.ToHttp(g => g); // TODO: PERSONA 3 -> ToDto
+            var result =
+                await groupDelegate.UpdateAsync(
+                    tournamentId,
+                    groupId,
+                    dto.Name);
+
+            return result.ToHttp(ToDto);
         })
         .AddEndpointFilter<ValidationFilter<UpdateGroupDto>>();
 
-        group.MapDelete("/{groupId}", async (string tournamentId, string groupId, IGroupDelegate groupDelegate) =>
+        group.MapDelete("/{groupId}", async (
+            string tournamentId,
+            string groupId,
+            IGroupDelegate groupDelegate) =>
         {
-            if (!Ids.IsValid(groupId)) return Results.BadRequest();
+            if (!Ids.IsValid(tournamentId) ||
+                !Ids.IsValid(groupId))
+            {
+                return Results.BadRequest();
+            }
 
-            var result = await groupDelegate.DeleteAsync(tournamentId, groupId);
+            var result =
+                await groupDelegate.DeleteAsync(
+                    tournamentId,
+                    groupId);
+
             return result.ToNoContentHttp();
         });
 
-        group.MapPatch("/{groupId}/teams", async (string tournamentId, string groupId, AssignTeamsDto dto, IGroupDelegate groupDelegate) =>
+        group.MapPatch("/{groupId}/teams", async (
+            string tournamentId,
+            string groupId,
+            AssignTeamsDto dto,
+            IGroupDelegate groupDelegate) =>
         {
-            if (!Ids.IsValid(groupId)) return Results.BadRequest();
+            if (!Ids.IsValid(tournamentId) ||
+                !Ids.IsValid(groupId))
+            {
+                return Results.BadRequest();
+            }
 
-            var result = await groupDelegate.AssignTeamsAsync(tournamentId, groupId, dto.TeamIds);
+            var result =
+                await groupDelegate.AssignTeamsAsync(
+                    tournamentId,
+                    groupId,
+                    dto.TeamIds);
+
             return result.ToNoContentHttp();
-        });
+        })
+        .AddEndpointFilter<ValidationFilter<AssignTeamsDto>>();
     }
 
-    // TODO: PERSONA 3 — implementar el mapeo Group -> GroupDto (incluye Teams)
+    private static GroupDto ToDto(Group group)
+    {
+        return new GroupDto(
+            group.Id,
+            group.Name,
+            group.TournamentId,
+            group.Teams
+                .Select(team =>
+                    new TeamDto(
+                        team.Id,
+                        team.Name))
+                .ToList());
+    }
 }
