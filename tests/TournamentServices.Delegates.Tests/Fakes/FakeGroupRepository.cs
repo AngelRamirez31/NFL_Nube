@@ -9,7 +9,19 @@ public class FakeGroupRepository : IGroupRepository
 {
     private readonly List<Group> _groups = new()
     {
-        new Group { Id = "group-1", Name = "Group A", TournamentId = "tournament-1" }
+        new Group
+        {
+            Id = "group-1",
+            Name = "Group A",
+            TournamentId = "tournament-1",
+            // Los mismos equipos que FakeTeamRepository: sin esto, crear un
+            // partido siempre daría 422 "team doesn't belong to tournament".
+            Teams =
+            {
+                new Team { Id = "team-1", Name = "Eagles" },
+                new Team { Id = "team-2", Name = "Cowboys" }
+            }
+        }
     };
 
     public Task<IReadOnlyList<Group>> GetByTournamentAsync(string tournamentId) =>
