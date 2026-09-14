@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace TournamentServices.Domain;
 
 // PERSONA 4 (Matches) es la dueña de esta clase.
@@ -11,6 +13,15 @@ public class Match
 
     // Nullable: un match recién creado no tiene score todavía.
     public Score? Score { get; set; }
+
+    // Rellenados por el delegate al leer, para que el MatchDto exponga el
+    // nombre del equipo y no solo el id. [JsonIgnore]: nunca se persisten,
+    // el documento solo guarda HomeTeamId/VisitorTeamId.
+    [JsonIgnore]
+    public Team? HomeTeam { get; set; }
+
+    [JsonIgnore]
+    public Team? VisitorTeam { get; set; }
 
     // Calculados, no almacenados: se derivan de Score en vez de guardarse
     // como columnas propias que podrían desincronizarse.
