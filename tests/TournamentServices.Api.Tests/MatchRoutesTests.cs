@@ -7,8 +7,8 @@ using Xunit;
 namespace TournamentServices.Api.Tests;
 
 // Tests de contrato (código HTTP, Location, forma del JSON) contra ApiFactory.
-// Datos precargados por los fakes: tournament-1 -> group-1 -> team-1 (Eagles),
-// team-2 (Cowboys); team-3 (Giants) no está en ningún grupo del torneo.
+// Datos precargados por los fakes: tournament-1 -> group-with-teams ->
+// team-1 (Eagles), team-2 (Cowboys); team-3 (Giants) no está en ningún grupo.
 public class MatchRoutesTests : IClassFixture<ApiFactory>
 {
     private const string Tournament = "/tournaments/tournament-1/matches";
@@ -22,7 +22,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateMatch_WithTeamsInTheSameGroup_Returns201WithLocation()
     {
-        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto("group-1", "team-1", "team-2"));
+        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto("group-with-teams", "team-1", "team-2"));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
@@ -193,7 +193,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
 
     private async Task<string> CreateMatchAsync()
     {
-        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto("group-1", "team-1", "team-2"));
+        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto("group-with-teams", "team-1", "team-2"));
         response.EnsureSuccessStatusCode();
 
         return response.Headers.Location!.ToString();
