@@ -6,9 +6,9 @@ namespace TournamentServices.Api.Routes;
 
 // ============================================================
 // PERSONA 2 — Tournaments
-// Sigue el patrón de TeamRoutes.cs. Faltan los TODO marcados abajo:
-// mapear domain <-> dto, y llamar a ITournamentDelegate una vez que
-// dejes de lanzar NotImplementedException ahí.
+// Sigue el patrón de TeamRoutes.cs (Result<T> + .ToHttp()/.ToCreatedHttp()/
+// .ToNoContentHttp()). Faltan los TODO marcados abajo: mapear domain <-> dto
+// y crear tus validadores en Api/Validators/TournamentValidators.cs.
 // ============================================================
 public static class TournamentRoutes
 {
@@ -18,50 +18,52 @@ public static class TournamentRoutes
 
         group.MapGet("/", async (ITournamentDelegate tournamentDelegate) =>
         {
-            // TODO: PERSONA 2 — listar todos y mapear a TournamentDto
-            var tournaments = await tournamentDelegate.GetAllAsync();
-            return Results.Ok(tournaments); // TODO: reemplazar por .Select(ToDto)
+            var result = await tournamentDelegate.GetAllAsync();
+            return result.ToHttp(tournaments => tournaments); // TODO: PERSONA 2 -> .Select(ToDto)
         });
 
         group.MapGet("/{tournamentId}", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
         {
             if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
 
-            // TODO: PERSONA 2
-            var tournament = await tournamentDelegate.GetByIdAsync(tournamentId);
-            return tournament is null ? Results.NotFound() : Results.Ok(tournament); // TODO: ToDto
+            var result = await tournamentDelegate.GetByIdAsync(tournamentId);
+            return result.ToHttp(t => t); // TODO: PERSONA 2 -> ToDto
         });
 
         group.MapPost("/", async (CreateTournamentDto dto, ITournamentDelegate tournamentDelegate) =>
         {
-            // TODO: PERSONA 2 — mapear dto -> Tournament. Format.Type solo acepta "NFL";
-            // si viene otro valor, responde 400 (valídalo aquí o con FluentValidation).
-            // var created = await tournamentDelegate.CreateAsync(...);
-            // return Results.Created($"/tournaments/{created.Id}", ToDto(created));
+            // TODO: PERSONA 2 — mapear dto -> Tournament (Format.Type solo acepta "NFL")
+            // var result = await tournamentDelegate.CreateAsync(...);
+            // return result.ToCreatedHttp(t => $"/tournaments/{t.Id}", ToDto);
             throw new NotImplementedException();
-        });
+        })
+        .AddEndpointFilter<ValidationFilter<CreateTournamentDto>>();
 
         group.MapPut("/{tournamentId}", async (string tournamentId, UpdateTournamentDto dto, ITournamentDelegate tournamentDelegate) =>
         {
             // TODO: PERSONA 2
             throw new NotImplementedException();
-        });
+        })
+        .AddEndpointFilter<ValidationFilter<UpdateTournamentDto>>();
 
         group.MapPatch("/{tournamentId}", async (string tournamentId, PatchTournamentDto dto, ITournamentDelegate tournamentDelegate) =>
         {
-            // TODO: PERSONA 2 — solo actualizar los campos que vengan no-nulos
-            var updated = await tournamentDelegate.PatchAsync(
+            if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
+
+            var result = await tournamentDelegate.PatchAsync(
                 tournamentId, dto.Name, dto.Format?.NumberOfGroups, dto.Format?.MaxTeamsPerGroup, dto.Format?.Type);
-            return updated is null ? Results.NotFound() : Results.Ok(updated); // TODO: ToDto
+            return result.ToHttp(t => t); // TODO: PERSONA 2 -> ToDto
         });
 
         group.MapDelete("/{tournamentId}", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
         {
-            var deleted = await tournamentDelegate.DeleteAsync(tournamentId);
-            return deleted ? Results.NoContent() : Results.NotFound();
+            if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
+
+            var result = await tournamentDelegate.DeleteAsync(tournamentId);
+            return result.ToNoContentHttp();
         });
     }
 
-    // TODO: PERSONA 2 — implementar el mapeo Tournament -> TournamentDto (incluye Format, Groups, Matches)
-    // private static TournamentDto ToDto(Tournament tournament) => ...
+    // TODO: PERSONA 2 — implementar el mapeo Tournament -> TournamentDto
+    // (incluye Format, y Groups/Matches consultando IGroupRepository/IMatchRepository)
 }

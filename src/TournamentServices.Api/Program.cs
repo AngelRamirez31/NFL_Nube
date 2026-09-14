@@ -1,3 +1,7 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using FluentValidation;
+using Scalar.AspNetCore;
 using TournamentServices.Api.Routes;
 using TournamentServices.Delegates;
 using TournamentServices.Repositories;
@@ -5,27 +9,24 @@ using TournamentServices.Repositories;
 var builder = WebApplication.CreateBuilder(args);
 
 // ------------------------------------------------------------
+// Postgres — requiere que la BD esté levantada (ver README/Paso 0:
+// Podman + database/db_script.sql + database/002_matches_index.sql).
+// La cadena de conexión vive en appsettings.Development.json.
+// ------------------------------------------------------------
+builder.Services.AddNpgsqlDataSource(
+    builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Falta ConnectionStrings:DefaultConnection en appsettings.*.json"));
+
+// ------------------------------------------------------------
 // Dependency Injection — SIEMPRE apunta a las implementaciones REALES aquí.
 //
-// Los repos reales empiezan lanzando NotImplementedException; eso es
-// normal hasta que cada quien los complete. NO registres los *Fake*
-// (carpeta Repositories/Fakes) en este archivo compartido: si dos
-// personas registran la misma interfaz dos veces, gana la última
-// registrada y se pisan entre sí sin darse cuenta.
+// Los repos/delegates de Tournaments/Groups/Matches empiezan lanzando
+// NotImplementedException; eso es normal hasta que cada quien los complete.
 //
-// Los Fakes son para dos usos aislados, que NO tocan este Program.cs:
-//   1) Tests unitarios de tu Delegate con Moq (mockeas la interfaz).
-//   2) Un WebApplicationFactory local en TUS pruebas de integración,
-//      sobreescribiendo el servicio solo dentro de ese test:
-//
-//      var app = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
-//          b.ConfigureServices(services =>
-//              services.AddScoped<ITeamRepository, FakeTeamRepository>()));
-//
-// Así cada quien prueba su parte de forma aislada sin alterar lo que
-// ven los demás al correr `dotnet run`.
+// NO registres los *Fake* (movidos a tests/TournamentServices.Delegates.Tests/Fakes)
+// en este archivo compartido: son solo para tests aislados (Moq o
+// WebApplicationFactory.ConfigureTestServices), nunca para `dotnet run`.
 // ------------------------------------------------------------
-
 builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 builder.Services.AddScoped<ITeamDelegate, TeamDelegate>();
 
@@ -38,9 +39,27 @@ builder.Services.AddScoped<IGroupDelegate, GroupDelegate>();
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<IMatchDelegate, MatchDelegate>();
 
+// ------------------------------------------------------------
+// Validación, errores y serialización
+// ------------------------------------------------------------
+builder.Services.AddProblemDetails();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
+builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.MapOpenApi();
+app.MapScalarApiReference(); // UI en /scalar/v1
 
 app.MapGet("/health", () => Results.Ok("Services running"));
 

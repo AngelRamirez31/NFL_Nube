@@ -1,5 +1,5 @@
-using TournamentServices.Api.Dtos;
 using TournamentServices.Api.Common;
+using TournamentServices.Api.Dtos;
 using TournamentServices.Delegates;
 using TournamentServices.Domain;
 
@@ -8,9 +8,10 @@ namespace TournamentServices.Api.Routes;
 // ============================================================
 // PERSONA 1 — Teams
 // Esta es la ÚNICA ruta ya resuelta de punta a punta, para que sirva
-// de ejemplo del patrón que deben seguir Tournament/Group/MatchRoutes.
-// Ajusta lo que haga falta cuando tu TeamDelegate deje de lanzar
-// NotImplementedException.
+// de ejemplo del patrón que deben seguir Tournament/Group/MatchRoutes:
+// Ids.IsValid -> 400, delegate devuelve Result<T>, .ToHttp()/.ToCreatedHttp()/
+// .ToNoContentHttp() traduce a la respuesta HTTP, ValidationFilter<T> valida
+// el body antes de llegar al handler.
 // ============================================================
 public static class TeamRoutes
 {
@@ -20,34 +21,40 @@ public static class TeamRoutes
 
         group.MapGet("/", async (ITeamDelegate teamDelegate) =>
         {
-            var teams = await teamDelegate.GetAllAsync();
-            return Results.Ok(teams.Select(ToDto));
+            var result = await teamDelegate.GetAllAsync();
+            return result.ToHttp(teams => teams.Select(ToDto));
         });
 
         group.MapGet("/{teamId}", async (string teamId, ITeamDelegate teamDelegate) =>
         {
             if (!Ids.IsValid(teamId)) return Results.BadRequest();
 
-            var team = await teamDelegate.GetByIdAsync(teamId);
-            return team is null ? Results.NotFound() : Results.Ok(ToDto(team));
+            var result = await teamDelegate.GetByIdAsync(teamId);
+            return result.ToHttp(ToDto);
         });
 
         group.MapPost("/", async (CreateTeamDto dto, ITeamDelegate teamDelegate) =>
         {
-            var created = await teamDelegate.CreateAsync(new Team { Name = dto.Name });
-            return Results.Created($"/teams/{created.Id}", ToDto(created));
-        });
+            var result = await teamDelegate.CreateAsync(new Team { Name = dto.Name });
+            return result.ToCreatedHttp(team => $"/teams/{team.Id}", ToDto);
+        })
+        .AddEndpointFilter<ValidationFilter<CreateTeamDto>>();
 
         group.MapPut("/{teamId}", async (string teamId, UpdateTeamDto dto, ITeamDelegate teamDelegate) =>
         {
-            var updated = await teamDelegate.UpdateAsync(teamId, new Team { Name = dto.Name });
-            return updated is null ? Results.NotFound() : Results.Ok(ToDto(updated));
-        });
+            if (!Ids.IsValid(teamId)) return Results.BadRequest();
+
+            var result = await teamDelegate.UpdateAsync(teamId, new Team { Name = dto.Name });
+            return result.ToHttp(ToDto);
+        })
+        .AddEndpointFilter<ValidationFilter<UpdateTeamDto>>();
 
         group.MapDelete("/{teamId}", async (string teamId, ITeamDelegate teamDelegate) =>
         {
-            var deleted = await teamDelegate.DeleteAsync(teamId);
-            return deleted ? Results.NoContent() : Results.NotFound();
+            if (!Ids.IsValid(teamId)) return Results.BadRequest();
+
+            var result = await teamDelegate.DeleteAsync(teamId);
+            return result.ToNoContentHttp();
         });
     }
 

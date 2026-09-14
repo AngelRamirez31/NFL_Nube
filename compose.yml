@@ -1,0 +1,15 @@
+services:
+  tournament_db:
+    image: postgres:17.6-alpine3.22
+    container_name: tournament_db
+    environment:
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/db_script.sql:/docker-entrypoint-initdb.d/01-db_script.sql:ro
+      - ./database/002_matches_index.sql:/docker-entrypoint-initdb.d/02-matches_index.sql:ro
+      - tournament_db_data:/var/lib/postgresql/data
+
+volumes:
+  tournament_db_data:

@@ -8,6 +8,12 @@ public class Match
     public string? GroupId { get; set; }
     public string HomeTeamId { get; set; } = string.Empty;
     public string VisitorTeamId { get; set; } = string.Empty;
-    public Score Score { get; set; } = new();
-    public bool IsCompleted { get; set; }
+
+    // Nullable: un match recién creado no tiene score todavía.
+    public Score? Score { get; set; }
+
+    // Calculados, no almacenados: se derivan de Score en vez de guardarse
+    // como columnas propias que podrían desincronizarse.
+    public bool IsCompleted => Score is not null;
+    public Enums.Winner? Winner => Score?.GetWinner();
 }

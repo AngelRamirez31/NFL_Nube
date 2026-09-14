@@ -1,49 +1,102 @@
+using Dapper;
+using Npgsql;
 using TournamentServices.Domain;
 
 namespace TournamentServices.Repositories;
 
 // ============================================================
 // PERSONA 1 — Teams
-// TODO: implementar esta clase con una lista/diccionario en memoria.
-// No necesitas base de datos para este primer avance.
+// Implementación real contra Postgres (JSONB). Es el MODELO que
+// Personas 2, 3 y 4 copian para Tournament/Group/MatchRepository.
+//
+// Reglas del Paso 0 aplicadas aquí:
+//   - El id vive en la columna, nunca dentro del document (por eso
+//     ToTeam() lo asigna después de deserializar).
+//   - Si el id no es un GUID válido, se devuelve null/false en vez
+//     de dejar que Postgres tire 22P02 — así el 404 sale "gratis"
+//     y ninguna ruta tiene que cambiar.
 // ============================================================
 public class TeamRepository : ITeamRepository
 {
-    private readonly List<Team> _teams = new();
+    private readonly NpgsqlDataSource _dataSource;
 
-    public Task<IReadOnlyList<Team>> GetAllAsync()
+    public TeamRepository(NpgsqlDataSource dataSource)
     {
-        // TODO: PERSONA 1
-        throw new NotImplementedException();
+        _dataSource = dataSource;
     }
 
-    public Task<Team?> GetByIdAsync(string id)
+    public async Task<IReadOnlyList<Team>> GetAllAsync()
     {
-        // TODO: PERSONA 1
-        throw new NotImplementedException();
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        var rows = await connection.QueryAsync<TeamRow>("select id, document from TEAMS");
+        return rows.Select(ToTeam).ToList();
     }
 
-    public Task<Team> CreateAsync(Team team)
+    public async Task<Team?> GetByIdAsync(string id)
     {
-        // TODO: PERSONA 1 — recuerda generar el Id (p.ej. Guid.NewGuid().ToString())
-        throw new NotImplementedException();
+        if (!Guid.TryParse(id, out var teamId)) return null;
+
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        var row = await connection.QuerySingleOrDefaultAsync<TeamRow>(
+            "select id, document from TEAMS where id = @teamId", new { teamId });
+
+        return row is null ? null : ToTeam(row);
     }
 
-    public Task<Team?> UpdateAsync(string id, Team team)
+    public async Task<Team> CreateAsync(Team team)
     {
-        // TODO: PERSONA 1
-        throw new NotImplementedException();
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        var document = DocumentSerializer.To(team);
+
+        var newId = await connection.ExecuteScalarAsync<Guid>(
+            "insert into TEAMS (document) values (@document::jsonb) returning id",
+            new { document });
+
+        team.Id = newId.ToString();
+        return team;
     }
 
-    public Task<bool> DeleteAsync(string id)
+    public async Task<Team?> UpdateAsync(string id, Team team)
     {
-        // TODO: PERSONA 1
-        throw new NotImplementedException();
+        if (!Guid.TryParse(id, out var teamId)) return null;
+
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        team.Id = id;
+        var document = DocumentSerializer.To(team);
+
+        var updatedId = await connection.ExecuteScalarAsync<Guid?>(
+            """
+            update TEAMS set document = @document::jsonb, last_update_date = CURRENT_TIMESTAMP
+            where id = @teamId returning id
+            """,
+            new { teamId, document });
+
+        return updatedId is null ? null : team;
     }
 
-    public Task<bool> ExistsByNameAsync(string name)
+    public async Task<bool> DeleteAsync(string id)
     {
-        // TODO: PERSONA 1 — usado para validar nombre único al crear/actualizar
-        throw new NotImplementedException();
+        if (!Guid.TryParse(id, out var teamId)) return false;
+
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        var affected = await connection.ExecuteAsync("delete from TEAMS where id = @teamId", new { teamId });
+        return affected > 0;
     }
+
+    public async Task<bool> ExistsByNameAsync(string name)
+    {
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        var id = await connection.ExecuteScalarAsync<Guid?>(
+            "select id from TEAMS where document->>'name' = @name", new { name });
+        return id is not null;
+    }
+
+    private static Team ToTeam(TeamRow row)
+    {
+        var team = DocumentSerializer.From<Team>(row.Document);
+        team.Id = row.Id.ToString();
+        return team;
+    }
+
+    private record TeamRow(Guid Id, string Document);
 }

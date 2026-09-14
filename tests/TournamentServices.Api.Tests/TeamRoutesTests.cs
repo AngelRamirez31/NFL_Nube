@@ -1,18 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 using TournamentServices.Api.Dtos;
 using Xunit;
 
 namespace TournamentServices.Api.Tests;
 
-// PERSONA 1 — ejemplo de test de integración end-to-end (levanta la API en memoria).
-// Persona 2/3/4: copien este patrón para TournamentRoutesTests, GroupRoutesTests, MatchRoutesTests.
-public class TeamRoutesTests : IClassFixture<WebApplicationFactory<Program>>
+// PERSONA 1 — ejemplo de test de integración end-to-end (levanta la API en
+// memoria contra ApiFactory, sin Postgres). Persona 2/3/4: copien este
+// patrón para TournamentRoutesTests, GroupRoutesTests, MatchRoutesTests.
+public class TeamRoutesTests : IClassFixture<ApiFactory>
 {
     private readonly HttpClient _client;
 
-    public TeamRoutesTests(WebApplicationFactory<Program> factory)
+    public TeamRoutesTests(ApiFactory factory)
     {
         _client = factory.CreateClient();
     }
@@ -41,6 +41,14 @@ public class TeamRoutesTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task GetTeamById_WithInvalidFormat_ReturnsBadRequest()
     {
         var response = await _client.GetAsync("/teams/invalid#id!");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateTeam_WithEmptyName_ReturnsBadRequest()
+    {
+        var response = await _client.PostAsJsonAsync("/teams", new CreateTeamDto(""));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

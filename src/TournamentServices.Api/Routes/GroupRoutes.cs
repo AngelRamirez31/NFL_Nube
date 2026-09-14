@@ -6,7 +6,8 @@ namespace TournamentServices.Api.Routes;
 
 // ============================================================
 // PERSONA 3 — Groups
-// Sigue el patrón de TeamRoutes.cs.
+// Sigue el patrón de TeamRoutes.cs (Result<T> + .ToHttp()/.ToCreatedHttp()/
+// .ToNoContentHttp()).
 // ============================================================
 public static class GroupRoutes
 {
@@ -16,50 +17,48 @@ public static class GroupRoutes
 
         group.MapGet("/", async (string tournamentId, IGroupDelegate groupDelegate) =>
         {
-            // TODO: PERSONA 3
-            var groups = await groupDelegate.GetByTournamentAsync(tournamentId);
-            return Results.Ok(groups); // TODO: .Select(ToDto)
+            var result = await groupDelegate.GetByTournamentAsync(tournamentId);
+            return result.ToHttp(groups => groups); // TODO: PERSONA 3 -> .Select(ToDto)
         });
 
         group.MapGet("/{groupId}", async (string tournamentId, string groupId, IGroupDelegate groupDelegate) =>
         {
             if (!Ids.IsValid(groupId)) return Results.BadRequest();
 
-            // TODO: PERSONA 3
-            var found = await groupDelegate.GetByIdAsync(tournamentId, groupId);
-            return found is null ? Results.NotFound() : Results.Ok(found); // TODO: ToDto
+            var result = await groupDelegate.GetByIdAsync(tournamentId, groupId);
+            return result.ToHttp(g => g); // TODO: PERSONA 3 -> ToDto
         });
 
         group.MapPost("/", async (string tournamentId, CreateGroupDto dto, IGroupDelegate groupDelegate) =>
         {
-            // TODO: PERSONA 3 — devolver 404 si el torneo no existe, 422 si el nombre ya existe en el torneo
-            var created = await groupDelegate.CreateAsync(tournamentId, dto.Name);
-            if (created is null) return Results.UnprocessableEntity();
-            return Results.Created($"/tournaments/{tournamentId}/groups/{created.Id}", created); // TODO: ToDto
-        });
+            var result = await groupDelegate.CreateAsync(tournamentId, dto.Name);
+            return result.ToCreatedHttp(g => $"/tournaments/{tournamentId}/groups/{g.Id}", g => g); // TODO: ToDto
+        })
+        .AddEndpointFilter<ValidationFilter<CreateGroupDto>>();
 
         group.MapPut("/{groupId}", async (string tournamentId, string groupId, UpdateGroupDto dto, IGroupDelegate groupDelegate) =>
         {
-            // TODO: PERSONA 3
-            throw new NotImplementedException();
-        });
+            if (!Ids.IsValid(groupId)) return Results.BadRequest();
+
+            var result = await groupDelegate.UpdateAsync(tournamentId, groupId, dto.Name);
+            return result.ToHttp(g => g); // TODO: PERSONA 3 -> ToDto
+        })
+        .AddEndpointFilter<ValidationFilter<UpdateGroupDto>>();
 
         group.MapDelete("/{groupId}", async (string tournamentId, string groupId, IGroupDelegate groupDelegate) =>
         {
-            var deleted = await groupDelegate.DeleteAsync(tournamentId, groupId);
-            return deleted ? Results.NoContent() : Results.NotFound();
+            if (!Ids.IsValid(groupId)) return Results.BadRequest();
+
+            var result = await groupDelegate.DeleteAsync(tournamentId, groupId);
+            return result.ToNoContentHttp();
         });
 
         group.MapPatch("/{groupId}/teams", async (string tournamentId, string groupId, AssignTeamsDto dto, IGroupDelegate groupDelegate) =>
         {
-            // TODO: PERSONA 3 — el delegate devuelve: null = 404, false = 422, true = 204
+            if (!Ids.IsValid(groupId)) return Results.BadRequest();
+
             var result = await groupDelegate.AssignTeamsAsync(tournamentId, groupId, dto.TeamIds);
-            return result switch
-            {
-                null => Results.NotFound(),
-                false => Results.UnprocessableEntity(),
-                true => Results.NoContent(),
-            };
+            return result.ToNoContentHttp();
         });
     }
 

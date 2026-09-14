@@ -1,6 +1,7 @@
 using TournamentServices.Domain;
+using TournamentServices.Repositories;
 
-namespace TournamentServices.Repositories.Fakes;
+namespace TournamentServices.Delegates.Tests.Fakes;
 
 // Fake para que PERSONA 4 pueda probar Matches
 // sin esperar al GroupRepository real de PERSONA 3.
@@ -31,6 +32,7 @@ public class FakeGroupRepository : IGroupRepository
     public Task<bool> ExistsByNameInTournamentAsync(string tournamentId, string name) =>
         Task.FromResult(_groups.Any(g => g.TournamentId == tournamentId && g.Name == name));
 
-    public Task<Group?> FindByTournamentAndTeamAsync(string tournamentId, string teamId) => 
-        Task.FromResult<Group?>(null);
+    public Task<Group?> FindByTournamentAndTeamAsync(string tournamentId, string teamId) =>
+        Task.FromResult(_groups.FirstOrDefault(g =>
+            g.TournamentId == tournamentId && g.Teams.Any(t => t.Id == teamId)));
 }
