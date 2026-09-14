@@ -4,18 +4,6 @@ using TournamentServices.Domain;
 
 namespace TournamentServices.Repositories;
 
-// ============================================================
-// PERSONA 1 — Teams
-// Implementación real contra Postgres (JSONB). Es el MODELO que
-// Personas 2, 3 y 4 copian para Tournament/Group/MatchRepository.
-//
-// Reglas del Paso 0 aplicadas aquí:
-//   - El id vive en la columna, nunca dentro del document (por eso
-//     ToTeam() lo asigna después de deserializar).
-//   - Si el id no es un GUID válido, se devuelve null/false en vez
-//     de dejar que Postgres tire 22P02 — así el 404 sale "gratis"
-//     y ninguna ruta tiene que cambiar.
-// ============================================================
 public class TeamRepository : ITeamRepository
 {
     private readonly NpgsqlDataSource _dataSource;
