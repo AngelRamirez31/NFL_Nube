@@ -29,6 +29,9 @@ public class ApiFactory : WebApplicationFactory<Program>
 
             services.RemoveAll<IGroupRepository>();
             services.AddSingleton<IGroupRepository, FakeGroupRepository>();
+
+            services.RemoveAll<IMatchRepository>();
+            services.AddSingleton<IMatchRepository, FakeMatchRepository>();
         });
     }
 }
