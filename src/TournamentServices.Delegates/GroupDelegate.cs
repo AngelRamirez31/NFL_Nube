@@ -1,34 +1,10 @@
+using Npgsql;
 using TournamentServices.Domain;
 using TournamentServices.Domain.Common;
 using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates;
 
-// ============================================================
-// PERSONA 3 — Groups
-// TODO: orquesta IGroupRepository + ITeamRepository + ITournamentRepository.
-// La lógica de negocio del profesor ya está resuelta en GroupDelegate.hpp/.cpp
-// del repo de referencia — traducirla casi literal:
-//
-//   CreateAsync: 404 si el torneo no existe (Result.NotFound).
-//                422 si el nombre del grupo ya existe en el torneo
-//                (ExistsByNameInTournamentAsync + capturar SqlState 23505
-//                como red de seguridad ante carreras).
-//
-//   AssignTeamsAsync, en este orden:
-//     1) grupo inexistente -> 404
-//     2) equipo duplicado en la MISMA petición -> 422
-//     3) grupo.Teams.Count + nuevos > tournament.Format.MaxTeamsPerGroup -> 422
-//        (el C++ hardcodea >= 32; AQUÍ SE LEE MaxTeamsPerGroup del torneo,
-//        que es lo que pide este avance)
-//     4) por cada teamId: no existe -> 422 · ya asignado a otro grupo del
-//        mismo torneo (FindByTournamentAndTeamAsync) -> 422
-//     5) éxito -> 204 (Result<Unit>.Ok)
-//
-// Mientras Teams/Tournaments reales no estén listos, inyecta los fakes de
-// tests/TournamentServices.Delegates.Tests/Fakes/ SOLO en tus propios tests
-// (WebApplicationFactory / unit tests con Moq), nunca en Program.cs.
-// ============================================================
 public class GroupDelegate : IGroupDelegate
 {
     private readonly IGroupRepository _groupRepository;
@@ -45,12 +21,246 @@ public class GroupDelegate : IGroupDelegate
         _tournamentRepository = tournamentRepository;
     }
 
-    public Task<Result<IReadOnlyList<Group>>> GetByTournamentAsync(string tournamentId) => throw new NotImplementedException();
-    public Task<Result<Group>> GetByIdAsync(string tournamentId, string groupId) => throw new NotImplementedException();
-    public Task<Result<Group>> CreateAsync(string tournamentId, string name) => throw new NotImplementedException();
-    public Task<Result<Group>> UpdateAsync(string tournamentId, string groupId, string name) => throw new NotImplementedException();
-    public Task<Result<Unit>> DeleteAsync(string tournamentId, string groupId) => throw new NotImplementedException();
+    public async Task<Result<IReadOnlyList<Group>>> GetByTournamentAsync(
+        string tournamentId)
+    {
+        var groups = await _groupRepository.GetByTournamentAsync(tournamentId);
 
-    public Task<Result<Unit>> AssignTeamsAsync(string tournamentId, string groupId, IEnumerable<string> teamIds)
-        => throw new NotImplementedException();
+        return Result<IReadOnlyList<Group>>.Ok(groups);
+    }
+
+    public async Task<Result<Group>> GetByIdAsync(
+        string tournamentId,
+        string groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(
+            tournamentId,
+            groupId);
+
+        return group is null
+            ? Result<Group>.NotFound(
+                $"Group '{groupId}' was not found in tournament '{tournamentId}'.")
+            : Result<Group>.Ok(group);
+    }
+
+    public async Task<Result<Group>> CreateAsync(
+        string tournamentId,
+        string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return Result<Group>.Invalid(
+                "Group name is required.");
+
+        var tournament = await _tournamentRepository.GetByIdAsync(
+            tournamentId);
+
+        if (tournament is null)
+            return Result<Group>.NotFound(
+                $"Tournament '{tournamentId}' was not found.");
+
+        if (await _groupRepository.ExistsByNameInTournamentAsync(
+                tournamentId,
+                name))
+        {
+            return Result<Group>.Conflict(
+                $"A group named '{name}' already exists in tournament '{tournamentId}'.");
+        }
+
+        var group = new Group
+        {
+            Name = name,
+            TournamentId = tournament.Id,
+            Teams = new List<Team>()
+        };
+
+        try
+        {
+            var created = await _groupRepository.CreateAsync(group);
+
+            return Result<Group>.Ok(created);
+        }
+        catch (PostgresException ex)
+            when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            return Result<Group>.Conflict(
+                $"A group named '{name}' already exists in tournament '{tournamentId}'.");
+        }
+        catch (PostgresException ex)
+            when (ex.SqlState == PostgresErrorCodes.ForeignKeyViolation)
+        {
+            return Result<Group>.NotFound(
+                $"Tournament '{tournamentId}' was not found.");
+        }
+    }
+
+    public async Task<Result<Group>> UpdateAsync(
+        string tournamentId,
+        string groupId,
+        string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return Result<Group>.Invalid(
+                "Group name is required.");
+
+        var group = await _groupRepository.GetByIdAsync(
+            tournamentId,
+            groupId);
+
+        if (group is null)
+        {
+            return Result<Group>.NotFound(
+                $"Group '{groupId}' was not found in tournament '{tournamentId}'.");
+        }
+
+        if (!string.Equals(group.Name, name, StringComparison.Ordinal))
+        {
+            var duplicate =
+                await _groupRepository.ExistsByNameInTournamentAsync(
+                    tournamentId,
+                    name);
+
+            if (duplicate)
+            {
+                return Result<Group>.Conflict(
+                    $"A group named '{name}' already exists in tournament '{tournamentId}'.");
+            }
+        }
+
+        group.Name = name;
+
+        try
+        {
+            var updated = await _groupRepository.UpdateAsync(
+                groupId,
+                group);
+
+            return updated is null
+                ? Result<Group>.NotFound(
+                    $"Group '{groupId}' was not found in tournament '{tournamentId}'.")
+                : Result<Group>.Ok(updated);
+        }
+        catch (PostgresException ex)
+            when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            return Result<Group>.Conflict(
+                $"A group named '{name}' already exists in tournament '{tournamentId}'.");
+        }
+    }
+
+    public async Task<Result<Unit>> DeleteAsync(
+        string tournamentId,
+        string groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(
+            tournamentId,
+            groupId);
+
+        if (group is null)
+        {
+            return Result<Unit>.NotFound(
+                $"Group '{groupId}' was not found in tournament '{tournamentId}'.");
+        }
+
+        var deleted = await _groupRepository.DeleteAsync(groupId);
+
+        return deleted
+            ? Result<Unit>.Ok(Unit.Value)
+            : Result<Unit>.NotFound(
+                $"Group '{groupId}' was not found in tournament '{tournamentId}'.");
+    }
+
+    public async Task<Result<Unit>> AssignTeamsAsync(
+        string tournamentId,
+        string groupId,
+        IEnumerable<string> teamIds)
+    {
+        var group = await _groupRepository.GetByIdAsync(
+            tournamentId,
+            groupId);
+
+        if (group is null)
+        {
+            return Result<Unit>.NotFound(
+                $"Group '{groupId}' was not found in tournament '{tournamentId}'.");
+        }
+
+        var requestedTeamIds = teamIds.ToList();
+
+        var normalizedIds = requestedTeamIds
+            .Select(NormalizeId)
+            .ToList();
+
+        if (normalizedIds.Count !=
+            normalizedIds.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+        {
+            return Result<Unit>.Conflict(
+                "The same team cannot be assigned more than once in a single request.");
+        }
+
+        var tournament = await _tournamentRepository.GetByIdAsync(
+            tournamentId);
+
+        if (tournament is null)
+        {
+            return Result<Unit>.NotFound(
+                $"Tournament '{tournamentId}' was not found.");
+        }
+
+        if (group.Teams.Count + requestedTeamIds.Count >
+            tournament.Format.MaxTeamsPerGroup)
+        {
+            return Result<Unit>.Conflict(
+                $"Group '{groupId}' cannot contain more than " +
+                $"{tournament.Format.MaxTeamsPerGroup} teams.");
+        }
+
+        var teamsToAssign = new List<Team>();
+
+        foreach (var teamId in requestedTeamIds)
+        {
+            var team = await _teamRepository.GetByIdAsync(teamId);
+
+            if (team is null)
+            {
+                return Result<Unit>.Conflict(
+                    $"Team '{teamId}' does not exist.");
+            }
+
+            var assignedGroup =
+                await _groupRepository.FindByTournamentAndTeamAsync(
+                    tournamentId,
+                    teamId);
+
+            if (assignedGroup is not null)
+            {
+                return Result<Unit>.Conflict(
+                    $"Team '{teamId}' is already assigned to group " +
+                    $"'{assignedGroup.Id}' in tournament '{tournamentId}'.");
+            }
+
+            teamsToAssign.Add(team);
+        }
+
+        group.Teams.AddRange(teamsToAssign);
+
+        var updated = await _groupRepository.UpdateAsync(
+            groupId,
+            group);
+
+        if (updated is null)
+        {
+            return Result<Unit>.NotFound(
+                $"Group '{groupId}' was not found in tournament '{tournamentId}'.");
+        }
+
+        return Result<Unit>.Ok(Unit.Value);
+    }
+
+    private static string NormalizeId(string id)
+    {
+        if (Guid.TryParse(id, out var parsed))
+            return parsed.ToString();
+
+        return id.Trim();
+    }
 }
