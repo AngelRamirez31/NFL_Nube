@@ -4,8 +4,6 @@ using Xunit;
 
 namespace TournamentServices.Domain.Tests;
 
-// Ejemplo ya funcionando — PERSONA 4 puede copiar este patrón
-// para el resto de las pruebas de Match/Score.
 public class ScoreTests
 {
     [Fact]
@@ -24,5 +22,30 @@ public class ScoreTests
         Assert.Equal(Winner.HOME, score.GetWinner());
     }
 
-    // TODO: PERSONA 4 — agregar más casos (home gana, marcador en 0-0, etc.)
+    [Fact]
+    public void GetWinner_WhenHomeScoresMore_ReturnsHome()
+    {
+        var score = new Score { HomeTeamScore = 24, VisitorTeamScore = 17 };
+
+        Assert.Equal(Winner.HOME, score.GetWinner());
+    }
+
+    [Fact]
+    public void GetWinner_WhenScorelessDraw_ReturnsHome()
+    {
+        var score = new Score { HomeTeamScore = 0, VisitorTeamScore = 0 };
+
+        Assert.Equal(Winner.HOME, score.GetWinner());
+    }
+
+    [Theory]
+    [InlineData(1, 0, Winner.HOME)]
+    [InlineData(0, 1, Winner.VISITOR)]
+    [InlineData(45, 44, Winner.HOME)]
+    public void GetWinner_DecidesByOnePoint(int home, int visitor, Winner expected)
+    {
+        var score = new Score { HomeTeamScore = home, VisitorTeamScore = visitor };
+
+        Assert.Equal(expected, score.GetWinner());
+    }
 }

@@ -1,14 +1,10 @@
 using TournamentServices.Api.Common;
 using TournamentServices.Api.Dtos;
 using TournamentServices.Delegates;
+using TournamentServices.Domain;
 
 namespace TournamentServices.Api.Routes;
 
-// ============================================================
-// PERSONA 4 — Matches
-// Sigue el patrón de TeamRoutes.cs (Result<T> + .ToHttp()/.ToCreatedHttp()/
-// .ToNoContentHttp()).
-// ============================================================
 public static class MatchRoutes
 {
     public static void MapMatchRoutes(this WebApplication app)
@@ -17,43 +13,58 @@ public static class MatchRoutes
 
         group.MapGet("/", async (string tournamentId, IMatchDelegate matchDelegate) =>
         {
+            if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
+
             var result = await matchDelegate.GetByTournamentAsync(tournamentId);
-            return result.ToHttp(matches => matches); // TODO: PERSONA 4 -> .Select(ToDto)
+            return result.ToHttp(matches => matches.Select(ToDto));
         });
 
         group.MapGet("/{matchId}", async (string tournamentId, string matchId, IMatchDelegate matchDelegate) =>
         {
-            if (!Ids.IsValid(matchId)) return Results.BadRequest();
+            if (!Ids.IsValid(tournamentId) || !Ids.IsValid(matchId)) return Results.BadRequest();
 
             var result = await matchDelegate.GetByIdAsync(tournamentId, matchId);
-            return result.ToHttp(m => m); // TODO: PERSONA 4 -> ToDto
+            return result.ToHttp(ToDto);
         });
 
         group.MapPost("/", async (string tournamentId, CreateMatchDto dto, IMatchDelegate matchDelegate) =>
         {
+            if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
+
             var result = await matchDelegate.CreateAsync(tournamentId, dto.GroupId, dto.HomeTeamId, dto.VisitorTeamId);
-            return result.ToCreatedHttp(m => $"/tournaments/{tournamentId}/matches/{m.Id}", m => m); // TODO: ToDto
+            return result.ToCreatedHttp(m => $"/tournaments/{tournamentId}/matches/{m.Id}", ToDto);
         })
         .AddEndpointFilter<ValidationFilter<CreateMatchDto>>();
 
         group.MapPatch("/{matchId}/score", async (string tournamentId, string matchId, UpdateScoreDto dto, IMatchDelegate matchDelegate) =>
         {
-            if (!Ids.IsValid(matchId)) return Results.BadRequest();
+            if (!Ids.IsValid(tournamentId) || !Ids.IsValid(matchId)) return Results.BadRequest();
 
             var result = await matchDelegate.UpdateScoreAsync(tournamentId, matchId, dto.HomeTeamScore, dto.VisitorTeamScore);
-            return result.ToHttp(m => m); // TODO: PERSONA 4 -> ToDto
+            return result.ToHttp(ToDto);
         })
         .AddEndpointFilter<ValidationFilter<UpdateScoreDto>>();
 
         group.MapDelete("/{matchId}", async (string tournamentId, string matchId, IMatchDelegate matchDelegate) =>
         {
-            if (!Ids.IsValid(matchId)) return Results.BadRequest();
+            if (!Ids.IsValid(tournamentId) || !Ids.IsValid(matchId)) return Results.BadRequest();
 
             var result = await matchDelegate.DeleteAsync(tournamentId, matchId);
             return result.ToNoContentHttp();
         });
     }
 
-    // TODO: PERSONA 4 — implementar el mapeo Match -> MatchDto
-    // (incluye Score, Winner y IsCompleted, que ya vienen calculados en Domain/Match.cs)
+    private static MatchDto ToDto(Match match) => new(
+        match.Id,
+        match.TournamentId,
+        match.GroupId,
+        match.HomeTeamId,
+        match.VisitorTeamId,
+        match.HomeTeam is null ? null : new TeamDto(match.HomeTeam.Id, match.HomeTeam.Name),
+        match.VisitorTeam is null ? null : new TeamDto(match.VisitorTeam.Id, match.VisitorTeam.Name),
+        // El contrato siempre expone un objeto score; un partido sin jugar se
+        // distingue por isCompleted = false, no por score ausente.
+        new ScoreDto(match.Score?.HomeTeamScore ?? 0, match.Score?.VisitorTeamScore ?? 0),
+        match.Winner?.ToString(),
+        match.IsCompleted);
 }
