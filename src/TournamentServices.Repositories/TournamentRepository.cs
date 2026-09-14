@@ -1,29 +1,9 @@
+using Dapper;
 using Npgsql;
 using TournamentServices.Domain;
 
 namespace TournamentServices.Repositories;
 
-// ============================================================
-// PERSONA 2 — Tournaments
-// TODO: implementar contra Postgres siguiendo el patrón de TeamRepository.cs
-// (Guid.TryParse al entrar -> null/false, id en la columna no en el document).
-//
-// SQL confirmado en el proyecto de referencia del profesor
-// (PostgresConnectionProvider.hpp) — cópialo, no lo reinventes:
-//
-//   insert into TOURNAMENTS (document) values (@document::jsonb) returning id;
-//   select id, document from TOURNAMENTS where id = @id;
-//
-// Completar (el C++ no los tenía implementados):
-//   select id, document from TOURNAMENTS;
-//   update TOURNAMENTS set document = @document::jsonb, last_update_date = CURRENT_TIMESTAMP
-//     where id = @id returning id;
-//   delete from TOURNAMENTS where id = @id;
-//
-// Recuerda: DELETE debe fallar con 23503 (FK) si el torneo tiene grupos —
-// el cascade real (matches -> groups -> tournament) se resuelve en el
-// Delegate/integración final, no aquí.
-// ============================================================
 public class TournamentRepository : ITournamentRepository
 {
     private readonly NpgsqlDataSource _dataSource;
@@ -33,35 +13,80 @@ public class TournamentRepository : ITournamentRepository
         _dataSource = dataSource;
     }
 
-    public Task<IReadOnlyList<Tournament>> GetAllAsync()
+    public async Task<IReadOnlyList<Tournament>> GetAllAsync()
     {
-        // TODO: PERSONA 2
-        throw new NotImplementedException();
+        await using var connection = await _dataSource.OpenConnectionAsync();
+
+        var rows = await connection.QueryAsync<TournamentRow>("select id, document from TOURNAMENTS");
+
+        return rows.Select(ToTournament).ToList();
     }
 
-    public Task<Tournament?> GetByIdAsync(string id)
+    public async Task<Tournament?> GetByIdAsync(string id)
     {
-        // TODO: PERSONA 2
-        throw new NotImplementedException();
+        // Sin este guard, un id que cumple el regex del contrato pero no es UUID
+        // (p. ej. "no-existe") haría que Postgres tirara 22P02 y la ruta 500.
+        if (!Guid.TryParse(id, out var tournamentId)) return null;
+
+        await using var connection = await _dataSource.OpenConnectionAsync();
+
+        var row = await connection.QuerySingleOrDefaultAsync<TournamentRow>(
+            "select id, document from TOURNAMENTS where id = @tournamentId",
+            new { tournamentId });
+
+        return row is null ? null : ToTournament(row);
     }
 
-    public Task<Tournament> CreateAsync(Tournament tournament)
+    public async Task<Tournament> CreateAsync(Tournament tournament)
     {
-        // TODO: PERSONA 2
-        throw new NotImplementedException();
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        var document = DocumentSerializer.To(tournament);
+
+        var newId = await connection.ExecuteScalarAsync<Guid>(
+            "insert into TOURNAMENTS (document) values (@document::jsonb) returning id",
+            new { document });
+
+        tournament.Id = newId.ToString();
+        return tournament;
     }
 
-    public Task<Tournament?> UpdateAsync(string id, Tournament tournament)
+    public async Task<Tournament?> UpdateAsync(string id, Tournament tournament)
     {
-        // TODO: PERSONA 2 — usado tanto por PUT (todos los campos) como por el
-        // read-modify-write de PATCH (el merge de campos se hace en el Delegate,
-        // aquí solo se persiste el documento completo ya mergeado).
-        throw new NotImplementedException();
+        if (!Guid.TryParse(id, out var tournamentId)) return null;
+
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        tournament.Id = id;
+        var document = DocumentSerializer.To(tournament);
+
+        var updatedId = await connection.ExecuteScalarAsync<Guid?>(
+            """
+            update TOURNAMENTS set document = @document::jsonb, last_update_date = CURRENT_TIMESTAMP
+            where id = @tournamentId returning id
+            """,
+            new { tournamentId, document });
+
+        return updatedId is null ? null : tournament;
     }
 
-    public Task<bool> DeleteAsync(string id)
+    public async Task<bool> DeleteAsync(string id)
     {
-        // TODO: PERSONA 2
-        throw new NotImplementedException();
+        if (!Guid.TryParse(id, out var tournamentId)) return false;
+
+        await using var connection = await _dataSource.OpenConnectionAsync();
+
+        var affected = await connection.ExecuteAsync(
+            "delete from TOURNAMENTS where id = @tournamentId",
+            new { tournamentId });
+
+        return affected > 0;
     }
+
+    private static Tournament ToTournament(TournamentRow row)
+    {
+        var tournament = DocumentSerializer.From<Tournament>(row.Document);
+        tournament.Id = row.Id.ToString();
+        return tournament;
+    }
+
+    private record TournamentRow(Guid Id, string Document);
 }
