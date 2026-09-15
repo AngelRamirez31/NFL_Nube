@@ -1,6 +1,5 @@
 namespace TournamentServices.Api.Dtos;
 
-// PERSONA 4
 public record ScoreDto(int HomeTeamScore, int VisitorTeamScore);
 public record MatchDto(
     string Id, string TournamentId, string? GroupId,

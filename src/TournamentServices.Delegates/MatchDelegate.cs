@@ -3,15 +3,6 @@ using TournamentServices.Domain.Common;
 using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates;
-
-// PERSONA 4 — Matches
-// Reglas (-> Result.Conflict = 422, salvo donde se indique):
-//   - homeTeamId == visitorTeamId -> 422
-//   - homeTeamId/visitorTeamId no existen o no pertenecen al torneo -> 422
-//   - si viene groupId, ambos equipos deben estar en ese grupo -> 422
-//   - match inexistente -> 404 (Result.NotFound)
-//   - score negativo -> 400 (Result.Invalid); ya lo ataja FluentValidation
-//     en la ruta, se repite aquí como defensa en profundidad
 public class MatchDelegate : IMatchDelegate
 {
     private readonly IMatchRepository _matchRepository;

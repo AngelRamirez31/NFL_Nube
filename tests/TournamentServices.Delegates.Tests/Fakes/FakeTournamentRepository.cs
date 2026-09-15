@@ -4,8 +4,6 @@ using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates.Tests.Fakes;
 
-// Fake precargado para que PERSONA 3 pueda probar Groups
-// sin esperar al TournamentRepository real de PERSONA 2.
 public class FakeTournamentRepository : ITournamentRepository
 {
     private readonly List<Tournament> _tournaments = new()

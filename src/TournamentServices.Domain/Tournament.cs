@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace TournamentServices.Domain;
 
-// PERSONA 2 (Tournaments) es la dueña de esta clase.
 public class Tournament
 {
     public string Id { get; set; } = string.Empty;

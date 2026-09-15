@@ -4,7 +4,6 @@ using TournamentServices.Domain;
 
 namespace TournamentServices.Repositories;
 
-// PERSONA 4 — Matches
 // MATCHES no tiene columna tournament_id: se filtra por document->>'tournamentId'
 // (índice en database/002_matches_index.sql). Guid.TryParse antes de cada query
 // evita que un id no-UUID tire 22P02 en vez de devolver null/false.

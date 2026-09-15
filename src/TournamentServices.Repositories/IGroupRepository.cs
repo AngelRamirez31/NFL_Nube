@@ -10,8 +10,5 @@ public interface IGroupRepository
     Task<Group?> UpdateAsync(string groupId, Group group);
     Task<bool> DeleteAsync(string groupId);
     Task<bool> ExistsByNameInTournamentAsync(string tournamentId, string name);
-
-    // Agregado por el Paso 0: ¿este equipo ya está en algún grupo de este torneo?
-    // Es el select_group_in_tournament del profesor (containment sobre el JSONB).
     Task<Group?> FindByTournamentAndTeamAsync(string tournamentId, string teamId);
 }

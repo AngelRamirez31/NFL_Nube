@@ -14,9 +14,7 @@ public class FakeGroupRepository : IGroupRepository
             TournamentId = "tournament-1",
             Teams = new List<Team>()
         },
-        // Grupo con equipos ya asignados, para los tests de Matches: crear un
-        // partido exige que ambos equipos pertenezcan a un grupo del torneo.
-        // Va aparte de group-1 para no alterar el fixture que usan los de Groups.
+
         new Group
         {
             Id = "group-with-teams",

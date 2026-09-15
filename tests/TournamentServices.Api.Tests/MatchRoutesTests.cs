@@ -97,9 +97,6 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    // Ojo con el dato de prueba: un id como "invalid#id!" no sirve aquí porque
-    // el cliente HTTP trata el # como inicio del fragmento y al servidor solo
-    // le llega "invalid", que sí cumple el regex.
     [Theory]
     [InlineData("invalid_id")]
     [InlineData("foo.bar")]

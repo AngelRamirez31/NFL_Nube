@@ -28,7 +28,7 @@ public class TournamentFormatDtoValidator : AbstractValidator<TournamentFormatDt
         RuleFor(x => x.NumberOfGroups).GreaterThan(0);
         RuleFor(x => x.MaxTeamsPerGroup).GreaterThan(0);
 
-        // Este proyecto es solo formato NFL: no existe ROUND_ROBIN.
+        // SOLO FORMATO NFL
         RuleFor(x => x.Type)
             .Must(type => type == "NFL")
             .WithMessage("Only 'NFL' is supported as tournament type.");

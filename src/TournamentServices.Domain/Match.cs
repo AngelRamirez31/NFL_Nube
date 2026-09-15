@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace TournamentServices.Domain;
 
-// PERSONA 4 (Matches) es la dueña de esta clase.
 public class Match
 {
     public string Id { get; set; } = string.Empty;

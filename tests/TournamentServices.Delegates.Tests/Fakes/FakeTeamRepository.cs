@@ -3,7 +3,6 @@ using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates.Tests.Fakes;
 
-// Fake precargado para que PERSONA 3 y PERSONA 4 puedan probar
 // Groups/Matches sin esperar a que el TeamRepository real esté listo.
 // NO es el entregable final: cuando el TeamRepository real de
 // PERSONA 1 esté listo, se reemplaza este fake en Program.cs.

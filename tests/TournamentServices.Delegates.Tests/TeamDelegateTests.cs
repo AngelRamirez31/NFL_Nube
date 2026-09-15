@@ -7,11 +7,6 @@ using Xunit;
 
 namespace TournamentServices.Delegates.Tests;
 
-// ============================================================
-// PERSONA 1 — Ejemplo de cómo mockear el repositorio con Moq y asertar
-// sobre Result<T>/ErrorKind. Persona 2/3/4: copien este patrón para
-// Tournament/Group/MatchDelegateTests.
-// ============================================================
 public class TeamDelegateTests
 {
     private readonly Mock<ITeamRepository> _repoMock = new();
@@ -63,6 +58,4 @@ public class TeamDelegateTests
         Assert.Equal(ErrorKind.Validation, result.Error);
     }
 
-    // TODO: PERSONA 1 — completar según la tabla "Required Test Cases per Delegate"
-    // del contrato: GetAllAsync, UpdateAsync, DeleteAsync.
 }

@@ -5,7 +5,7 @@ using TournamentServices.Domain.Common;
 using TournamentServices.Domain.Enums;
 using TournamentServices.Repositories;
 using Xunit;
-using Match = TournamentServices.Domain.Match;   // desambigua contra Moq.Match
+using Match = TournamentServices.Domain.Match;  
 
 namespace TournamentServices.Delegates.Tests;
 

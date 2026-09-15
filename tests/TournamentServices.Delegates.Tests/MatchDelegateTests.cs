@@ -138,7 +138,7 @@ public class MatchDelegateTests
         Assert.Equal(Winner.VISITOR, result.Value!.Winner);
     }
 
-    // Empate = HOME (pendiente de confirmar con el profesor, ver Domain/Score.cs).
+    // Empate = HOME
     [Fact]
     public async Task UpdateScoreAsync_WhenTied_ReturnsHomeAndIsCompleted()
     {

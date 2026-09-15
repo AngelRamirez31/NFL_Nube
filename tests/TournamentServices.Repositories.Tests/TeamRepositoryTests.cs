@@ -5,8 +5,7 @@ using Xunit;
 
 namespace TournamentServices.Repositories.Tests;
 
-// PERSONA 1 — pruebas de integración REALES contra Postgres.
-// Requieren la BD levantada (ver README: `podman compose up -d`).
+// podman compose up -d
 // Corren aparte de las rápidas: `dotnet test --filter "Category!=Integration"`
 // las salta si no tienes Podman encendido.
 [Trait("Category", "Integration")]
@@ -41,9 +40,7 @@ public class TeamRepositoryTests
 
         var found = await repository.GetByIdAsync("no-es-un-uuid");
 
-        Assert.Null(found); // y NO lanza PostgresException 22P02
+        Assert.Null(found);
     }
 
-    // TODO: PERSONA 1 — agregar el resto de casos (GetAll, Update, Delete,
-    // ExistsByNameAsync) y replicar este mismo patrón para tu TournamentRepositoryTests.
 }

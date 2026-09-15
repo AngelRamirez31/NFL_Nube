@@ -7,8 +7,7 @@ using Xunit;
 
 namespace TournamentServices.Repositories.Tests;
 
-// PERSONA 4 — pruebas de integración REALES contra Postgres.
-// Requieren la BD levantada (ver README: `podman compose up -d`).
+// podman compose up -d
 // `dotnet test --filter "Category!=Integration"` las salta si no tienes
 // Podman encendido.
 [Trait("Category", "Integration")]

@@ -6,8 +6,6 @@ using Xunit;
 
 namespace TournamentServices.Repositories.Tests;
 
-// Requieren la BD levantada (`podman compose up -d`).
-// `dotnet test --filter "Category!=Integration"` las salta.
 [Trait("Category", "Integration")]
 public class TournamentRepositoryTests
 {
