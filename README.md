@@ -1,51 +1,50 @@
 # NFL Nube — Tournament Services
 
-API REST para administrar torneos de fútbol americano: equipos, torneos, grupos y partidos. El proyecto está construido con ASP.NET Core Minimal API, PostgreSQL y una arquitectura en capas.
+A REST API for managing American football tournaments, including teams, tournaments, groups, and matches. The project uses ASP.NET Core Minimal API, PostgreSQL, and a layered architecture.
 
-## Componentes
+## Components
 
-- `src/TournamentServices.Api`: endpoints HTTP, validaciones y documentación de la API.
-- `src/TournamentServices.Domain`: entidades y reglas de negocio.
-- `src/TournamentServices.Delegates`: coordinación de casos de uso.
-- `src/TournamentServices.Repositories`: acceso a PostgreSQL.
-- `database/`: scripts de inicialización de la base de datos.
-- `tests/`: pruebas de dominio, repositorios, delegados y API.
-- `load_test/`: prueba de carga con Locust.
+- `src/TournamentServices.Api`: HTTP endpoints, validation, and API documentation.
+- `src/TournamentServices.Domain`: entities and business rules.
+- `src/TournamentServices.Delegates`: application use-case coordination.
+- `src/TournamentServices.Repositories`: PostgreSQL data access.
+- `database/`: database initialization scripts.
+- `tests/`: domain, repository, delegate, and API tests.
+- `load_test/`: Locust load test.
 
-## Requisitos
+## Requirements
 
 - .NET SDK 10.
-- Docker o Podman para ejecutar PostgreSQL.
+- Docker or Podman to run PostgreSQL.
 
-## Ejecutar localmente
+## Run Locally
 
-1. Inicia la base de datos desde la raíz del proyecto:
+1. Start the database from the project root:
 
    ```powershell
    docker compose up -d
    ```
 
-2. Restaura dependencias y ejecuta la API:
+2. Restore dependencies and run the API:
 
    ```powershell
    dotnet restore TournamentServices.sln
    dotnet run --project src/TournamentServices.Api
    ```
 
-3. Comprueba que el servicio responde en `/health`. La documentación interactiva queda disponible en `/scalar/v1` (en el puerto que indique `dotnet run`).
+3. Confirm that the service responds at `/health`. Interactive API documentation is available at `/scalar/v1` on the port reported by `dotnet run`.
 
-La configuración de desarrollo usa PostgreSQL en `localhost:5432`, base `tournament_db` y el usuario `tournament_svc`. Los scripts de `database/` se cargan al crear el contenedor.
+The development configuration uses PostgreSQL at `localhost:5432`, database `tournament_db`, and user `tournament_svc`. The scripts in `database/` run when the container is created.
 
-## Pruebas
+## Tests
 
 ```powershell
 dotnet test TournamentServices.sln
 ```
 
-Para una prueba de carga, con la API activa:
+To run a load test, first start the API and then run:
 
 ```powershell
 pip install locust
 locust -f load_test/locustfile.py --host http://localhost:<puerto>
 ```
-
