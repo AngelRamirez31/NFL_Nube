@@ -54,7 +54,7 @@ public static class MatchRoutes
         });
     }
 
-    private static MatchDto ToDto(Match match) => new(
+    internal static MatchDto ToDto(Match match) => new(
         match.Id,
         match.TournamentId,
         match.GroupId,

@@ -130,7 +130,7 @@ public static class GroupRoutes
         .AddEndpointFilter<ValidationFilter<AssignTeamsDto>>();
     }
 
-    private static GroupDto ToDto(Group group)
+    internal static GroupDto ToDto(Group group)
     {
         return new GroupDto(
             group.Id,

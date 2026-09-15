@@ -29,10 +29,17 @@ public class FakeTeamRepository : ITeamRepository
         return Task.FromResult(team);
     }
 
-    public Task<Team?> UpdateAsync(string id, Team team) =>
-        Task.FromResult<Team?>(null);
+    public Task<Team?> UpdateAsync(string id, Team team)
+    {
+        var index = _teams.FindIndex(t => t.Id == id);
+        if (index < 0) return Task.FromResult<Team?>(null);
 
-    public Task<bool> DeleteAsync(string id) => Task.FromResult(false);
+        team.Id = id;
+        _teams[index] = team;
+        return Task.FromResult<Team?>(team);
+    }
+
+    public Task<bool> DeleteAsync(string id) => Task.FromResult(_teams.RemoveAll(t => t.Id == id) > 0);
 
     public Task<bool> ExistsByNameAsync(string name) =>
         Task.FromResult(_teams.Any(t => t.Name == name));

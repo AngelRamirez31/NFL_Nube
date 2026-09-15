@@ -31,8 +31,15 @@ public class FakeTournamentRepository : ITournamentRepository
         return Task.FromResult(tournament);
     }
 
-    public Task<Tournament?> UpdateAsync(string id, Tournament tournament) =>
-        Task.FromResult<Tournament?>(null);
+    public Task<Tournament?> UpdateAsync(string id, Tournament tournament)
+    {
+        var index = _tournaments.FindIndex(t => t.Id == id);
+        if (index < 0) return Task.FromResult<Tournament?>(null);
 
-    public Task<bool> DeleteAsync(string id) => Task.FromResult(false);
+        tournament.Id = id;
+        _tournaments[index] = tournament;
+        return Task.FromResult<Tournament?>(tournament);
+    }
+
+    public Task<bool> DeleteAsync(string id) => Task.FromResult(_tournaments.RemoveAll(t => t.Id == id) > 0);
 }
