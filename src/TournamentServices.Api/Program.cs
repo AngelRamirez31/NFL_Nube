@@ -41,7 +41,13 @@ builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
-app.UseExceptionHandler();
+// Si el body no se puede leer (JSON inválido), se responde 400.
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    StatusCodeSelector = ex => ex is BadHttpRequestException badRequest
+        ? badRequest.StatusCode
+        : StatusCodes.Status500InternalServerError
+});
 
 app.MapOpenApi();
 app.MapScalarApiReference(); // UI en /scalar/v1

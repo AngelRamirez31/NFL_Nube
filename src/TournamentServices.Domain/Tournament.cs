@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace TournamentServices.Domain;
 
 public class Tournament
@@ -8,11 +6,8 @@ public class Tournament
     public string Name { get; set; } = string.Empty;
     public TournamentFormat Format { get; set; } = new();
 
-    // Groups y Matches viven en sus propias tablas; el delegate los rellena al
-    // leer. [JsonIgnore] evita duplicarlos dentro del JSONB del torneo.
-    [JsonIgnore]
+    // Se llenan al leer el torneo. No se guardan dentro del JSONB del torneo.
     public List<Group> Groups { get; set; } = new();
 
-    [JsonIgnore]
     public List<Match> Matches { get; set; } = new();
 }

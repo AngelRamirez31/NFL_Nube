@@ -43,9 +43,7 @@ public class TeamDelegate : ITeamDelegate
         }
         catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
         {
-            // Red de seguridad ante carreras: dos requests casi simultáneos
-            // pueden pasar el ExistsByNameAsync antes de que cualquiera inserte.
-            // Locust con varios usuarios concurrentes las provoca de verdad.
+            // Por si dos peticiones al mismo tiempo intentan crear el mismo nombre.
             return Result<Team>.Invalid($"A team named '{team.Name}' already exists.");
         }
     }

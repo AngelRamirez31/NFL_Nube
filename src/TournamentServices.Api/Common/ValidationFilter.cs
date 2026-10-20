@@ -2,9 +2,7 @@ using FluentValidation;
 
 namespace TournamentServices.Api.Common;
 
-// Endpoint filter genérico: corre el IValidator<T> registrado para el tipo
-// del body y devuelve 400 con ProblemDetails si falla. Uso:
-//   group.MapPost("/", handler).AddEndpointFilter<ValidationFilter<CreateTeamDto>>();
+// Valida el body de la petición y responde 400 si tiene errores.
 public class ValidationFilter<T> : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)

@@ -4,9 +4,8 @@ using TournamentServices.Domain;
 
 namespace TournamentServices.Repositories;
 
-// MATCHES no tiene columna tournament_id: se filtra por document->>'tournamentId'
-// (índice en database/002_matches_index.sql). Guid.TryParse antes de cada query
-// evita que un id no-UUID tire 22P02 en vez de devolver null/false.
+// Los partidos se filtran por el tournamentId guardado dentro del JSONB.
+// Si un id no es UUID válido, se trata como no encontrado.
 public class MatchRepository : IMatchRepository
 {
     private readonly NpgsqlDataSource _dataSource;

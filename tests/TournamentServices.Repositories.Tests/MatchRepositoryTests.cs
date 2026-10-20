@@ -16,9 +16,7 @@ public class MatchRepositoryTests
     private static NpgsqlDataSource CreateDataSource() =>
         NpgsqlDataSource.Create("Host=localhost;Port=5432;Database=tournament_db;Username=tournament_svc;Password=password");
 
-    // Id de torneo único por corrida: MATCHES no tiene columna tournament_id
-    // propia, así que aislar por tournamentId es lo que evita que una prueba
-    // vea los partidos de otra.
+    // Id de torneo único en cada ejecución para que las pruebas no se mezclen.
     private static string NewTournamentId() => Guid.NewGuid().ToString();
 
     [Fact]

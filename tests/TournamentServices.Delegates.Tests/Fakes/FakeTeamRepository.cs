@@ -3,9 +3,7 @@ using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates.Tests.Fakes;
 
-// Groups/Matches sin esperar a que el TeamRepository real esté listo.
-// NO es el entregable final: cuando el TeamRepository real de
-// PERSONA 1 esté listo, se reemplaza este fake en Program.cs.
+// Repositorio de equipos en memoria para las pruebas (no usa base de datos).
 public class FakeTeamRepository : ITeamRepository
 {
     private readonly List<Team> _teams = new()

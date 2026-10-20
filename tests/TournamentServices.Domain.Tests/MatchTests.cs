@@ -4,8 +4,7 @@ using Xunit;
 
 namespace TournamentServices.Domain.Tests;
 
-// Winner e IsCompleted son propiedades calculadas: nadie las asigna a mano,
-// se derivan del Score.
+// Winner e IsCompleted se calculan a partir del Score.
 public class MatchTests
 {
     [Fact]
@@ -39,9 +38,7 @@ public class MatchTests
         Assert.Equal(Winner.VISITOR, match.Winner);
     }
 
-    // Empate = HOME (comportamiento pendiente de confirmar con el profesor,
-    // ver la nota en Domain/Score.cs). Un 0-0 terminado igual cuenta como
-    // IsCompleted = true.
+    // En empate gana el equipo local (HOME). Un 0-0 también cuenta como terminado.
     [Fact]
     public void Winner_WhenTied_IsHomeAndMatchIsCompleted()
     {

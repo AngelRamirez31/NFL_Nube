@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using TournamentServices.Api.Dtos;
 using Xunit;
 
 namespace TournamentServices.Api.Tests;
@@ -30,7 +29,7 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
 
         var response = await _client.PostAsJsonAsync(
             "/tournaments/tournament-1/groups",
-            new CreateGroupDto(name));
+            new { name });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
@@ -41,7 +40,7 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/tournaments/missing-tournament/groups",
-            new CreateGroupDto($"Group-{Guid.NewGuid()}"));
+            new { name = $"Group-{Guid.NewGuid()}" });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -51,8 +50,7 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PatchAsJsonAsync(
             "/tournaments/tournament-1/groups/missing-group/teams",
-            new AssignTeamsDto(
-                new List<string> { "team-1" }));
+            new[] { new { id = "team-1" } });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -64,12 +62,11 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
 
         var response = await _client.PatchAsJsonAsync(
             $"/tournaments/tournament-1/groups/{groupId}/teams",
-            new AssignTeamsDto(
-                new List<string>
-                {
-                    "team-1",
-                    "team-1"
-                }));
+            new[]
+            {
+                new { id = "team-1" },
+                new { id = "team-1" }
+            });
 
         Assert.Equal(
             HttpStatusCode.UnprocessableEntity,
@@ -83,15 +80,14 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
 
         var response = await _client.PatchAsJsonAsync(
             $"/tournaments/tournament-1/groups/{groupId}/teams",
-            new AssignTeamsDto(
-                new List<string>
-                {
-                    "team-1",
-                    "team-2",
-                    "team-3",
-                    "team-4",
-                    "team-5"
-                }));
+            new[]
+            {
+                new { id = "team-1" },
+                new { id = "team-2" },
+                new { id = "team-3" },
+                new { id = "team-4" },
+                new { id = "team-5" }
+            });
 
         Assert.Equal(
             HttpStatusCode.UnprocessableEntity,
@@ -106,8 +102,7 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
 
         var response = await _client.PatchAsJsonAsync(
             $"/tournaments/tournament-1/groups/{groupId}/teams",
-            new AssignTeamsDto(
-                new List<string> { teamId }));
+            new[] { new { id = teamId } });
 
         Assert.Equal(
             HttpStatusCode.NoContent,
@@ -123,8 +118,7 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
 
         var firstAssignment = await _client.PatchAsJsonAsync(
             $"/tournaments/tournament-1/groups/{firstGroupId}/teams",
-            new AssignTeamsDto(
-                new List<string> { teamId }));
+            new[] { new { id = teamId } });
 
         Assert.Equal(
             HttpStatusCode.NoContent,
@@ -132,8 +126,7 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
 
         var secondAssignment = await _client.PatchAsJsonAsync(
             $"/tournaments/tournament-1/groups/{secondGroupId}/teams",
-            new AssignTeamsDto(
-                new List<string> { teamId }));
+            new[] { new { id = teamId } });
 
         Assert.Equal(
             HttpStatusCode.UnprocessableEntity,
@@ -144,8 +137,7 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/tournaments/tournament-1/groups",
-            new CreateGroupDto(
-                $"Group-{Guid.NewGuid()}"));
+            new { name = $"Group-{Guid.NewGuid()}" });
 
         Assert.Equal(
             HttpStatusCode.Created,
@@ -164,8 +156,7 @@ public class GroupRoutesTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/teams",
-            new CreateTeamDto(
-                $"Team-{Guid.NewGuid()}"));
+            new { name = $"Team-{Guid.NewGuid()}" });
 
         Assert.Equal(
             HttpStatusCode.Created,

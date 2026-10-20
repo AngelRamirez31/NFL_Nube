@@ -1,13 +1,13 @@
 using FluentValidation;
 using TournamentServices.Api.Common;
-using TournamentServices.Api.Dtos;
+using TournamentServices.Domain;
 
 namespace TournamentServices.Api.Validators;
 
-public class CreateGroupDtoValidator
-    : AbstractValidator<CreateGroupDto>
+public class GroupValidator
+    : AbstractValidator<Group>
 {
-    public CreateGroupDtoValidator()
+    public GroupValidator()
     {
         RuleFor(x => x.Name)
             .NotEmpty()
@@ -15,29 +15,17 @@ public class CreateGroupDtoValidator
     }
 }
 
-public class UpdateGroupDtoValidator
-    : AbstractValidator<UpdateGroupDto>
+public class AssignTeamsValidator
+    : AbstractValidator<List<Team>>
 {
-    public UpdateGroupDtoValidator()
+    public AssignTeamsValidator()
     {
-        RuleFor(x => x.Name)
-            .NotEmpty()
-            .MaximumLength(100);
-    }
-}
-
-public class AssignTeamsDtoValidator
-    : AbstractValidator<AssignTeamsDto>
-{
-    public AssignTeamsDtoValidator()
-    {
-        RuleFor(x => x.TeamIds)
+        RuleFor(x => x)
             .NotNull()
             .NotEmpty();
 
-        RuleForEach(x => x.TeamIds)
-            .NotEmpty()
-            .Must(Ids.IsValid)
+        RuleForEach(x => x)
+            .Must(team => team is not null && Ids.IsValid(team.Id))
             .WithMessage("Each team ID must have a valid format.");
     }
 }

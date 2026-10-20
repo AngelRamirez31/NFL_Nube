@@ -50,20 +50,21 @@ public class MatchDelegate : IMatchDelegate
             return Result<Match>.Conflict("Home and visitor team must be different");
         }
 
-        if (await _teamRepository.GetByIdAsync(homeTeamId) is null)
+        var homeTeam = await _teamRepository.GetByIdAsync(homeTeamId);
+        if (homeTeam is null)
         {
             return Result<Match>.Conflict($"Team {homeTeamId} doesn't exist");
         }
 
-        if (await _teamRepository.GetByIdAsync(visitorTeamId) is null)
+        var visitorTeam = await _teamRepository.GetByIdAsync(visitorTeamId);
+        if (visitorTeam is null)
         {
             return Result<Match>.Conflict($"Team {visitorTeamId} doesn't exist");
         }
 
         if (groupId is not null)
         {
-            // Con groupId explícito: el grupo debe existir en el torneo y
-            // ambos equipos deben estar en ese mismo grupo.
+            // Si viene groupId, ambos equipos deben estar en ese grupo.
             var group = await _groupRepository.GetByIdAsync(tournamentId, groupId);
             if (group is null)
             {
@@ -77,7 +78,7 @@ public class MatchDelegate : IMatchDelegate
         }
         else
         {
-            // Sin groupId: basta con que cada equipo esté en algún grupo del torneo.
+            // Si no viene groupId, cada equipo debe estar en algún grupo del torneo.
             if (await _groupRepository.FindByTournamentAndTeamAsync(tournamentId, homeTeamId) is null)
             {
                 return Result<Match>.Conflict($"Team {homeTeamId} doesn't belong to tournament {tournamentId}");
@@ -98,6 +99,9 @@ public class MatchDelegate : IMatchDelegate
             Score = null   // aún no se juega: IsCompleted queda en false
         });
 
+        // Reutilizamos los equipos que ya se buscaron arriba.
+        created.HomeTeam = homeTeam;
+        created.VisitorTeam = visitorTeam;
         return Result<Match>.Ok(created);
     }
 
@@ -114,15 +118,17 @@ public class MatchDelegate : IMatchDelegate
             return Result<Match>.NotFound($"Match {matchId} not found in tournament {tournamentId}");
         }
 
-        // Asignar el Score es lo único que hace falta: Winner e IsCompleted
-        // son propiedades calculadas de Match.
+        // Solo se asigna el Score; Winner e IsCompleted se calculan solos.
         match.Score = new Score { HomeTeamScore = homeScore, VisitorTeamScore = visitorScore };
 
         var updated = await _matchRepository.UpdateAsync(matchId, match);
+        if (updated is null)
+        {
+            return Result<Match>.NotFound($"Match {matchId} not found in tournament {tournamentId}");
+        }
 
-        return updated is null
-            ? Result<Match>.NotFound($"Match {matchId} not found in tournament {tournamentId}")
-            : Result<Match>.Ok(updated);
+        await HydrateTeamsAsync(updated);
+        return Result<Match>.Ok(updated);
     }
 
     public async Task<Result<Unit>> DeleteAsync(string tournamentId, string matchId)
@@ -138,9 +144,7 @@ public class MatchDelegate : IMatchDelegate
             : Result<Unit>.NotFound($"Match {matchId} not found in tournament {tournamentId}");
     }
 
-    // El contrato pide que el MatchDto traiga homeTeam/visitorTeam con su nombre,
-    // no solo los ids. El documento JSONB guarda únicamente los ids, así que el
-    // detalle se resuelve aquí contra ITeamRepository.
+    // Agrega el nombre de los equipos al partido (en la base solo se guardan los ids).
     private async Task HydrateTeamsAsync(Match match)
     {
         match.HomeTeam = await _teamRepository.GetByIdAsync(match.HomeTeamId);

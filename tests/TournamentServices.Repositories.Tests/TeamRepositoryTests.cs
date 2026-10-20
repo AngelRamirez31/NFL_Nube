@@ -20,8 +20,7 @@ public class TeamRepositoryTests
         await using var dataSource = CreateDataSource();
         var repository = new TeamRepository(dataSource);
 
-        // Nombre único por corrida: los índices únicos castigan cualquier
-        // dato reutilizado entre ejecuciones de la prueba.
+        // Nombre único en cada ejecución para no chocar con datos anteriores.
         var uniqueName = $"Eagles-{Guid.NewGuid()}";
         var created = await repository.CreateAsync(new Team { Name = uniqueName });
         var found = await repository.GetByIdAsync(created.Id);

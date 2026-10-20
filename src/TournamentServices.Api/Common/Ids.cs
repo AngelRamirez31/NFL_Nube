@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace TournamentServices.Api.Common;
 
-// Compartido por todas las rutas: valida el formato de {id} del contrato ([A-Za-z0-9-]+).
+// Valida que el {id} solo tenga letras, números y guiones.
 public static partial class Ids
 {
     private static readonly Regex Pattern = new("^[A-Za-z0-9-]+$", RegexOptions.Compiled);

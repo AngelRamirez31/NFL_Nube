@@ -243,7 +243,7 @@ public class GroupDelegate : IGroupDelegate
 
         group.Teams.AddRange(teamsToAssign);
 
-        var updated = await _groupRepository.UpdateAsync(
+        var updated = await _groupRepository.UpdateAsync( 
             groupId,
             group);
 

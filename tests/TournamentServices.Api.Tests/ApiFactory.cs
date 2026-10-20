@@ -8,13 +8,6 @@ using Microsoft.AspNetCore.TestHost;
 
 namespace TournamentServices.Api.Tests;
 
-// Levanta la API en memoria SIN Postgres: reemplaza los repos reales por
-// los fakes (movidos a Delegates.Tests/Fakes) para que las rutas se
-// verifiquen en milisegundos. Persona 2/3/4 agreguen aquí el Remove/Add
-// del repo que les toque cuando escriban sus propios *RoutesTests.
-//
-// OJO: Singleton, no Scoped — con Scoped los datos se pierden entre
-// requests y un test tipo "CreateTeam_ThenGetById" fallaría.
 public class ApiFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)

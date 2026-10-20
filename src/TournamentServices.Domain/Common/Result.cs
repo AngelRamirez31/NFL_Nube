@@ -1,7 +1,7 @@
 namespace TournamentServices.Domain.Common;
 
-// Equivalente a std::expected<T, std::string> del proyecto de referencia en C++.
-// NotFound -> 404, Validation -> 400, Conflict -> 422 (mapeo en Api/Common/ResultExtensions.cs).
+// Resultado de una operación: el valor si salió bien, o el error si falló.
+// NotFound -> 404, Validation -> 400, Conflict -> 422.
 public enum ErrorKind
 {
     None,
@@ -20,7 +20,7 @@ public sealed record Result<T>(T? Value, ErrorKind Error, string? Message)
     public static Result<T> Invalid(string message) => new(default, ErrorKind.Validation, message);
 }
 
-// Para operaciones que no devuelven un valor (p.ej. Delete, AssignTeams).
+// Para operaciones que no devuelven valor (por ejemplo Delete).
 public readonly record struct Unit
 {
     public static readonly Unit Value = new();

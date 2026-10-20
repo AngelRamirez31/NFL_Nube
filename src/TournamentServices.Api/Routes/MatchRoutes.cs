@@ -1,5 +1,4 @@
 using TournamentServices.Api.Common;
-using TournamentServices.Api.Dtos;
 using TournamentServices.Delegates;
 using TournamentServices.Domain;
 
@@ -16,7 +15,7 @@ public static class MatchRoutes
             if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
 
             var result = await matchDelegate.GetByTournamentAsync(tournamentId);
-            return result.ToHttp(matches => matches.Select(ToDto));
+            return result.ToHttp();
         });
 
         group.MapGet("/{matchId}", async (string tournamentId, string matchId, IMatchDelegate matchDelegate) =>
@@ -24,26 +23,26 @@ public static class MatchRoutes
             if (!Ids.IsValid(tournamentId) || !Ids.IsValid(matchId)) return Results.BadRequest();
 
             var result = await matchDelegate.GetByIdAsync(tournamentId, matchId);
-            return result.ToHttp(ToDto);
+            return result.ToHttp();
         });
 
-        group.MapPost("/", async (string tournamentId, CreateMatchDto dto, IMatchDelegate matchDelegate) =>
+        group.MapPost("/", async (string tournamentId, Match match, IMatchDelegate matchDelegate) =>
         {
             if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
 
-            var result = await matchDelegate.CreateAsync(tournamentId, dto.GroupId, dto.HomeTeamId, dto.VisitorTeamId);
-            return result.ToCreatedHttp(m => $"/tournaments/{tournamentId}/matches/{m.Id}", ToDto);
+            var result = await matchDelegate.CreateAsync(tournamentId, match.GroupId, match.HomeTeamId, match.VisitorTeamId);
+            return result.ToCreatedHttp(m => $"/tournaments/{tournamentId}/matches/{m.Id}");
         })
-        .AddEndpointFilter<ValidationFilter<CreateMatchDto>>();
+        .AddEndpointFilter<ValidationFilter<Match>>();
 
-        group.MapPatch("/{matchId}/score", async (string tournamentId, string matchId, UpdateScoreDto dto, IMatchDelegate matchDelegate) =>
+        group.MapPatch("/{matchId}/score", async (string tournamentId, string matchId, Score score, IMatchDelegate matchDelegate) =>
         {
             if (!Ids.IsValid(tournamentId) || !Ids.IsValid(matchId)) return Results.BadRequest();
 
-            var result = await matchDelegate.UpdateScoreAsync(tournamentId, matchId, dto.HomeTeamScore, dto.VisitorTeamScore);
-            return result.ToHttp(ToDto);
+            var result = await matchDelegate.UpdateScoreAsync(tournamentId, matchId, score.HomeTeamScore, score.VisitorTeamScore);
+            return result.ToHttp();
         })
-        .AddEndpointFilter<ValidationFilter<UpdateScoreDto>>();
+        .AddEndpointFilter<ValidationFilter<Score>>();
 
         group.MapDelete("/{matchId}", async (string tournamentId, string matchId, IMatchDelegate matchDelegate) =>
         {
@@ -53,18 +52,4 @@ public static class MatchRoutes
             return result.ToNoContentHttp();
         });
     }
-
-    internal static MatchDto ToDto(Match match) => new(
-        match.Id,
-        match.TournamentId,
-        match.GroupId,
-        match.HomeTeamId,
-        match.VisitorTeamId,
-        match.HomeTeam is null ? null : new TeamDto(match.HomeTeam.Id, match.HomeTeam.Name),
-        match.VisitorTeam is null ? null : new TeamDto(match.VisitorTeam.Id, match.VisitorTeam.Name),
-        // El contrato siempre expone un objeto score; un partido sin jugar se
-        // distingue por isCompleted = false, no por score ausente.
-        new ScoreDto(match.Score?.HomeTeamScore ?? 0, match.Score?.VisitorTeamScore ?? 0),
-        match.Winner?.ToString(),
-        match.IsCompleted);
 }

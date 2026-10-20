@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using TournamentServices.Api.Dtos;
 using Xunit;
 
 namespace TournamentServices.Api.Tests;
@@ -12,7 +11,7 @@ public class TournamentRoutesTests : IClassFixture<ApiFactory>
 
     public TournamentRoutesTests(ApiFactory factory) => _client = factory.CreateClient();
 
-    private static TournamentFormatDto Format(string type = "NFL") => new(4, 2, type);
+    private static object Format(string type = "NFL") => new { maxTeamsPerGroup = 4, numberOfGroups = 2, type };
 
     [Fact]
     public async Task GetTournaments_ReturnsOk()
@@ -39,7 +38,7 @@ public class TournamentRoutesTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/tournaments",
-            new CreateTournamentDto($"T-{Guid.NewGuid()}", Format("ROUND_ROBIN")));
+            new { name = $"T-{Guid.NewGuid()}", format = Format("ROUND_ROBIN") });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -60,7 +59,7 @@ public class TournamentRoutesTests : IClassFixture<ApiFactory>
 
         var response = await _client.PatchAsJsonAsync(
             location,
-            new PatchTournamentDto("Nombre nuevo", null));
+            new { name = "Nombre nuevo" });
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -83,7 +82,7 @@ public class TournamentRoutesTests : IClassFixture<ApiFactory>
     {
         var response = await _client.PostAsJsonAsync(
             "/tournaments",
-            new CreateTournamentDto($"T-{Guid.NewGuid()}", Format()));
+            new { name = $"T-{Guid.NewGuid()}", format = Format() });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return response.Headers.Location!.ToString();

@@ -23,7 +23,7 @@ public class MatchDelegateTests
     {
         _delegate = new MatchDelegate(_matchRepository.Object, _teamRepository.Object, _groupRepository.Object);
 
-        // Escenario feliz por defecto: dos equipos que existen y comparten grupo.
+        // Datos base: dos equipos que existen y están en el mismo grupo.
         GivenTeamExists("team-1", "Eagles");
         GivenTeamExists("team-2", "Cowboys");
 
@@ -78,7 +78,7 @@ public class MatchDelegateTests
     [Fact]
     public async Task CreateAsync_WhenTeamIsNotInTheTournament_ReturnsConflict()
     {
-        // team-3 existe, pero FindByTournamentAndTeamAsync no lo encuentra en ningún grupo.
+        // team-3 existe, pero no está en ningún grupo del torneo.
         GivenTeamExists("team-3", "Giants");
 
         var result = await _delegate.CreateAsync(TournamentId, groupId: null, "team-1", "team-3");
@@ -98,8 +98,7 @@ public class MatchDelegateTests
     public async Task CreateAsync_WhenTeamsAreNotInTheSameGroup_ReturnsConflict()
     {
         GivenTeamExists("team-3", "Giants");
-        // group-1 solo tiene team-1 y team-2 (setup del constructor); team-3
-        // no pertenece a ese grupo aunque exista en el torneo.
+        // team-3 no está en group-1.
         var result = await _delegate.CreateAsync(TournamentId, GroupId, "team-1", "team-3");
 
         Assert.Equal(ErrorKind.Conflict, result.Error);
@@ -138,7 +137,7 @@ public class MatchDelegateTests
         Assert.Equal(Winner.VISITOR, result.Value!.Winner);
     }
 
-    // Empate = HOME
+    // En empate gana el equipo local (HOME).
     [Fact]
     public async Task UpdateScoreAsync_WhenTied_ReturnsHomeAndIsCompleted()
     {

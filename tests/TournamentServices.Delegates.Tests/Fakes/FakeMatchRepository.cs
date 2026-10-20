@@ -3,9 +3,7 @@ using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates.Tests.Fakes;
 
-// Doble en memoria de IMatchRepository para tests de rutas y de delegate:
-// verifica códigos HTTP y forma del JSON sin levantar Postgres.
-// NO es el entregable: el MatchRepository real usa Dapper sobre JSONB.
+// Repositorio de partidos en memoria para las pruebas (no usa base de datos).
 public class FakeMatchRepository : IMatchRepository
 {
     private readonly List<Match> _matches = new();

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using TournamentServices.Api.Dtos;
 using Xunit;
 
 namespace TournamentServices.Api.Tests;
@@ -25,7 +24,7 @@ public class TeamRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateTeam_ThenGetById_ReturnsCreatedTeam()
     {
-        var createResponse = await _client.PostAsJsonAsync("/teams", new CreateTeamDto("Patriots"));
+        var createResponse = await _client.PostAsJsonAsync("/teams", new { name = "Patriots" });
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
         var location = createResponse.Headers.Location!.ToString();
@@ -45,7 +44,7 @@ public class TeamRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateTeam_WithEmptyName_ReturnsBadRequest()
     {
-        var response = await _client.PostAsJsonAsync("/teams", new CreateTeamDto(""));
+        var response = await _client.PostAsJsonAsync("/teams", new { name = "" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

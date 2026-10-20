@@ -1,12 +1,12 @@
 using FluentValidation;
 using TournamentServices.Api.Common;
-using TournamentServices.Api.Dtos;
+using TournamentServices.Domain;
 
 namespace TournamentServices.Api.Validators;
 
-public class CreateMatchDtoValidator : AbstractValidator<CreateMatchDto>
+public class MatchValidator : AbstractValidator<Match>
 {
-    public CreateMatchDtoValidator()
+    public MatchValidator()
     {
         RuleFor(x => x.HomeTeamId)
             .NotEmpty().WithMessage("homeTeamId is required")
@@ -21,11 +21,10 @@ public class CreateMatchDtoValidator : AbstractValidator<CreateMatchDto>
     }
 }
 
-// El contrato pide 400 (no 422) para scores negativos, por eso la regla vive
-// aquí y no en el MatchDelegate (que la repite como red de seguridad).
-public class UpdateScoreDtoValidator : AbstractValidator<UpdateScoreDto>
+// Los marcadores negativos se rechazan con 400.
+public class ScoreValidator : AbstractValidator<Score>
 {
-    public UpdateScoreDtoValidator()
+    public ScoreValidator()
     {
         RuleFor(x => x.HomeTeamScore).GreaterThanOrEqualTo(0).WithMessage("homeTeamScore must be zero or positive");
         RuleFor(x => x.VisitorTeamScore).GreaterThanOrEqualTo(0).WithMessage("visitorTeamScore must be zero or positive");

@@ -1,5 +1,4 @@
 using TournamentServices.Api.Common;
-using TournamentServices.Api.Dtos;
 using TournamentServices.Delegates;
 using TournamentServices.Domain;
 
@@ -23,8 +22,7 @@ public static class GroupRoutes
             var result =
                 await groupDelegate.GetByTournamentAsync(tournamentId);
 
-            return result.ToHttp(groups =>
-                groups.Select(ToDto));
+            return result.ToHttp();
         });
 
         group.MapGet("/{groupId}", async (
@@ -43,12 +41,12 @@ public static class GroupRoutes
                     tournamentId,
                     groupId);
 
-            return result.ToHttp(ToDto);
+            return result.ToHttp();
         });
 
         group.MapPost("/", async (
             string tournamentId,
-            CreateGroupDto dto,
+            Group body,
             IGroupDelegate groupDelegate) =>
         {
             if (!Ids.IsValid(tournamentId))
@@ -57,19 +55,18 @@ public static class GroupRoutes
             var result =
                 await groupDelegate.CreateAsync(
                     tournamentId,
-                    dto.Name);
+                    body.Name);
 
             return result.ToCreatedHttp(
                 created =>
-                    $"/tournaments/{tournamentId}/groups/{created.Id}",
-                ToDto);
+                    $"/tournaments/{tournamentId}/groups/{created.Id}");
         })
-        .AddEndpointFilter<ValidationFilter<CreateGroupDto>>();
+        .AddEndpointFilter<ValidationFilter<Group>>();
 
         group.MapPut("/{groupId}", async (
             string tournamentId,
             string groupId,
-            UpdateGroupDto dto,
+            Group body,
             IGroupDelegate groupDelegate) =>
         {
             if (!Ids.IsValid(tournamentId) ||
@@ -82,11 +79,11 @@ public static class GroupRoutes
                 await groupDelegate.UpdateAsync(
                     tournamentId,
                     groupId,
-                    dto.Name);
+                    body.Name);
 
-            return result.ToHttp(ToDto);
+            return result.ToHttp();
         })
-        .AddEndpointFilter<ValidationFilter<UpdateGroupDto>>();
+        .AddEndpointFilter<ValidationFilter<Group>>();
 
         group.MapDelete("/{groupId}", async (
             string tournamentId,
@@ -110,7 +107,7 @@ public static class GroupRoutes
         group.MapPatch("/{groupId}/teams", async (
             string tournamentId,
             string groupId,
-            AssignTeamsDto dto,
+            List<Team> teams,
             IGroupDelegate groupDelegate) =>
         {
             if (!Ids.IsValid(tournamentId) ||
@@ -123,24 +120,10 @@ public static class GroupRoutes
                 await groupDelegate.AssignTeamsAsync(
                     tournamentId,
                     groupId,
-                    dto.TeamIds);
+                    teams.Select(team => team.Id));
 
             return result.ToNoContentHttp();
         })
-        .AddEndpointFilter<ValidationFilter<AssignTeamsDto>>();
-    }
-
-    internal static GroupDto ToDto(Group group)
-    {
-        return new GroupDto(
-            group.Id,
-            group.Name,
-            group.TournamentId,
-            group.Teams
-                .Select(team =>
-                    new TeamDto(
-                        team.Id,
-                        team.Name))
-                .ToList());
+        .AddEndpointFilter<ValidationFilter<List<Team>>>();
     }
 }

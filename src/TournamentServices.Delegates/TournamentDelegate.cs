@@ -34,10 +34,21 @@ public class TournamentDelegate : ITournamentDelegate
         if (tournament is null)
             return Result<Tournament>.NotFound($"Tournament '{id}' was not found.");
 
-        // El contrato pide que el detalle traiga sus groups y matches, que viven
-        // en sus propias tablas.
+        // Cargamos los grupos y partidos del torneo.
         tournament.Groups = (await _groupRepository.GetByTournamentAsync(id)).ToList();
         tournament.Matches = (await _matchRepository.GetByTournamentAsync(id)).ToList();
+
+        // Los equipos de cada partido se toman de los grupos ya cargados.
+        var teams = tournament.Groups
+            .SelectMany(g => g.Teams)
+            .GroupBy(t => t.Id)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        foreach (var match in tournament.Matches)
+        {
+            match.HomeTeam = teams.GetValueOrDefault(match.HomeTeamId);
+            match.VisitorTeam = teams.GetValueOrDefault(match.VisitorTeamId);
+        }
 
         return Result<Tournament>.Ok(tournament);
     }
@@ -76,9 +87,7 @@ public class TournamentDelegate : ITournamentDelegate
         }
     }
 
-    // READ - MODIFY - WRITE: se lee el torneo, se aplican solo los campos que
-    // vinieron, y se persiste el documento completo. Un merge superficial de
-    // JSONB (document || @patch) borraría el resto de Format.
+    // Se lee el torneo, se cambian solo los campos enviados y se guarda completo.
     public async Task<Result<Tournament>> PatchAsync(string id, string? name, int? numberOfGroups, int? maxTeamsPerGroup, string? type)
     {
         var tournament = await _tournamentRepository.GetByIdAsync(id);
@@ -109,8 +118,7 @@ public class TournamentDelegate : ITournamentDelegate
             tournament.Format.MaxTeamsPerGroup = maxTeamsPerGroup.Value;
         }
 
-        // A diferencia de Create/Update, aquí el type llega como string suelto,
-        // así que la validación del enum tiene que hacerse en esta capa.
+        // Aquí el type llega como texto, así que se valida en este punto.
         if (type is not null)
         {
             if (!Enum.TryParse<TournamentType>(type, ignoreCase: false, out var parsed))
@@ -125,8 +133,7 @@ public class TournamentDelegate : ITournamentDelegate
             : Result<Tournament>.Ok(updated);
     }
 
-    // El orden importa: GROUPS tiene FK a TOURNAMENTS, así que borrar el torneo
-    // primero fallaría con 23503.
+    // Primero se borran partidos y grupos, y al final el torneo.
     public async Task<Result<Unit>> DeleteAsync(string id)
     {
         var tournament = await _tournamentRepository.GetByIdAsync(id);

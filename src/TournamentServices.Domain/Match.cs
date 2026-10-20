@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace TournamentServices.Domain;
 
 public class Match
@@ -10,20 +8,15 @@ public class Match
     public string HomeTeamId { get; set; } = string.Empty;
     public string VisitorTeamId { get; set; } = string.Empty;
 
-    // Nullable: un match recién creado no tiene score todavía.
+    // Es null mientras el partido no tenga marcador.
     public Score? Score { get; set; }
 
-    // Rellenados por el delegate al leer, para que el MatchDto exponga el
-    // nombre del equipo y no solo el id. [JsonIgnore]: nunca se persisten,
-    // el documento solo guarda HomeTeamId/VisitorTeamId.
-    [JsonIgnore]
+    // Se llenan al leer para mostrar el nombre del equipo. No se guardan en la base.
     public Team? HomeTeam { get; set; }
 
-    [JsonIgnore]
     public Team? VisitorTeam { get; set; }
 
-    // Calculados, no almacenados: se derivan de Score en vez de guardarse
-    // como columnas propias que podrían desincronizarse.
+    // Se calculan a partir del Score.
     public bool IsCompleted => Score is not null;
     public Enums.Winner? Winner => Score?.GetWinner();
 }

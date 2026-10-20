@@ -1,36 +1,27 @@
 using FluentValidation;
-using TournamentServices.Api.Dtos;
+using TournamentServices.Domain;
 
 namespace TournamentServices.Api.Validators;
 
-public class CreateTournamentDtoValidator : AbstractValidator<CreateTournamentDto>
+public class TournamentValidator : AbstractValidator<Tournament>
 {
-    public CreateTournamentDtoValidator()
+    public TournamentValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Format).NotNull().SetValidator(new TournamentFormatDtoValidator()!);
+        RuleFor(x => x.Format).NotNull().SetValidator(new TournamentFormatValidator()!);
     }
 }
 
-public class UpdateTournamentDtoValidator : AbstractValidator<UpdateTournamentDto>
+public class TournamentFormatValidator : AbstractValidator<TournamentFormat>
 {
-    public UpdateTournamentDtoValidator()
-    {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-        RuleFor(x => x.Format).NotNull().SetValidator(new TournamentFormatDtoValidator()!);
-    }
-}
-
-public class TournamentFormatDtoValidator : AbstractValidator<TournamentFormatDto>
-{
-    public TournamentFormatDtoValidator()
+    public TournamentFormatValidator()
     {
         RuleFor(x => x.NumberOfGroups).GreaterThan(0);
         RuleFor(x => x.MaxTeamsPerGroup).GreaterThan(0);
 
-        // SOLO FORMATO NFL
+        // Solo se acepta el formato NFL.
         RuleFor(x => x.Type)
-            .Must(type => type == "NFL")
+            .IsInEnum()
             .WithMessage("Only 'NFL' is supported as tournament type.");
     }
 }

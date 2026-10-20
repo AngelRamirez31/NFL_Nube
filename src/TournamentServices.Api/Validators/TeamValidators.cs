@@ -1,19 +1,11 @@
 using FluentValidation;
-using TournamentServices.Api.Dtos;
+using TournamentServices.Domain;
 
 namespace TournamentServices.Api.Validators;
 
-public class CreateTeamDtoValidator : AbstractValidator<CreateTeamDto>
+public class TeamValidator : AbstractValidator<Team>
 {
-    public CreateTeamDtoValidator()
-    {
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
-    }
-}
-
-public class UpdateTeamDtoValidator : AbstractValidator<UpdateTeamDto>
-{
-    public UpdateTeamDtoValidator()
+    public TeamValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
     }

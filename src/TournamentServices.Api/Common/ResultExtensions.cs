@@ -2,8 +2,7 @@ using TournamentServices.Domain.Common;
 
 namespace TournamentServices.Api.Common;
 
-// Traducción única de Result<T> -> respuesta HTTP. Úsala en todas las rutas
-// en vez de escribir el switch a mano en cada endpoint.
+// Convierte un Result en la respuesta HTTP correspondiente.
 public static class ResultExtensions
 {
     public static IResult ToHttp<T>(this Result<T> result, Func<T, object>? map = null) => result.Error switch

@@ -1,8 +1,7 @@
+using System.Text.Json.Nodes;
 using TournamentServices.Api.Common;
-using TournamentServices.Api.Dtos;
 using TournamentServices.Delegates;
 using TournamentServices.Domain;
-using TournamentServices.Domain.Enums;
 
 namespace TournamentServices.Api.Routes;
 
@@ -15,7 +14,7 @@ public static class TournamentRoutes
         group.MapGet("/", async (ITournamentDelegate tournamentDelegate) =>
         {
             var result = await tournamentDelegate.GetAllAsync();
-            return result.ToHttp(tournaments => tournaments.Select(ToDto));
+            return result.ToHttp();
         });
 
         group.MapGet("/{tournamentId}", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
@@ -23,32 +22,38 @@ public static class TournamentRoutes
             if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
 
             var result = await tournamentDelegate.GetByIdAsync(tournamentId);
-            return result.ToHttp(ToDto);
+            return result.ToHttp();
         });
 
-        group.MapPost("/", async (CreateTournamentDto dto, ITournamentDelegate tournamentDelegate) =>
+        group.MapPost("/", async (Tournament tournament, ITournamentDelegate tournamentDelegate) =>
         {
-            var result = await tournamentDelegate.CreateAsync(ToDomain(dto.Name, dto.Format));
-            return result.ToCreatedHttp(t => $"/tournaments/{t.Id}", ToDto);
+            var result = await tournamentDelegate.CreateAsync(tournament);
+            return result.ToCreatedHttp(t => $"/tournaments/{t.Id}");
         })
-        .AddEndpointFilter<ValidationFilter<CreateTournamentDto>>();
+        .AddEndpointFilter<ValidationFilter<Tournament>>();
 
-        group.MapPut("/{tournamentId}", async (string tournamentId, UpdateTournamentDto dto, ITournamentDelegate tournamentDelegate) =>
+        group.MapPut("/{tournamentId}", async (string tournamentId, Tournament tournament, ITournamentDelegate tournamentDelegate) =>
         {
             if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
 
-            var result = await tournamentDelegate.UpdateAsync(tournamentId, ToDomain(dto.Name, dto.Format));
-            return result.ToHttp(ToDto);
+            var result = await tournamentDelegate.UpdateAsync(tournamentId, tournament);
+            return result.ToHttp();
         })
-        .AddEndpointFilter<ValidationFilter<UpdateTournamentDto>>();
+        .AddEndpointFilter<ValidationFilter<Tournament>>();
 
-        group.MapPatch("/{tournamentId}", async (string tournamentId, PatchTournamentDto dto, ITournamentDelegate tournamentDelegate) =>
+        // Se lee el JSON directamente para saber qué campos se enviaron.
+        group.MapPatch("/{tournamentId}", async (string tournamentId, JsonObject body, ITournamentDelegate tournamentDelegate) =>
         {
             if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
 
+            var format = body["format"];
             var result = await tournamentDelegate.PatchAsync(
-                tournamentId, dto.Name, dto.Format?.NumberOfGroups, dto.Format?.MaxTeamsPerGroup, dto.Format?.Type);
-            return result.ToHttp(ToDto);
+                tournamentId,
+                (string?)body["name"],
+                (int?)format?["numberOfGroups"],
+                (int?)format?["maxTeamsPerGroup"],
+                (string?)format?["type"]);
+            return result.ToHttp();
         });
 
         group.MapDelete("/{tournamentId}", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
@@ -59,26 +64,4 @@ public static class TournamentRoutes
             return result.ToNoContentHttp();
         });
     }
-
-    // El validador ya garantizó que Type sea "NFL" antes de llegar aquí.
-    private static Tournament ToDomain(string name, TournamentFormatDto format) => new()
-    {
-        Name = name,
-        Format = new TournamentFormat
-        {
-            NumberOfGroups = format.NumberOfGroups,
-            MaxTeamsPerGroup = format.MaxTeamsPerGroup,
-            Type = TournamentType.NFL
-        }
-    };
-
-    private static TournamentDto ToDto(Tournament tournament) => new(
-        tournament.Id,
-        tournament.Name,
-        new TournamentFormatDto(
-            tournament.Format.MaxTeamsPerGroup,
-            tournament.Format.NumberOfGroups,
-            tournament.Format.Type.ToString()),
-        tournament.Groups.Select(GroupRoutes.ToDto).ToList(),
-        tournament.Matches.Select(MatchRoutes.ToDto).ToList());
 }

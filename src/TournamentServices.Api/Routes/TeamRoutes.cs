@@ -1,5 +1,4 @@
 using TournamentServices.Api.Common;
-using TournamentServices.Api.Dtos;
 using TournamentServices.Delegates;
 using TournamentServices.Domain;
 
@@ -14,7 +13,7 @@ public static class TeamRoutes
         group.MapGet("/", async (ITeamDelegate teamDelegate) =>
         {
             var result = await teamDelegate.GetAllAsync();
-            return result.ToHttp(teams => teams.Select(ToDto));
+            return result.ToHttp();
         });
 
         group.MapGet("/{teamId}", async (string teamId, ITeamDelegate teamDelegate) =>
@@ -22,24 +21,24 @@ public static class TeamRoutes
             if (!Ids.IsValid(teamId)) return Results.BadRequest();
 
             var result = await teamDelegate.GetByIdAsync(teamId);
-            return result.ToHttp(ToDto);
+            return result.ToHttp();
         });
 
-        group.MapPost("/", async (CreateTeamDto dto, ITeamDelegate teamDelegate) =>
+        group.MapPost("/", async (Team team, ITeamDelegate teamDelegate) =>
         {
-            var result = await teamDelegate.CreateAsync(new Team { Name = dto.Name });
-            return result.ToCreatedHttp(team => $"/teams/{team.Id}", ToDto);
+            var result = await teamDelegate.CreateAsync(team);
+            return result.ToCreatedHttp(created => $"/teams/{created.Id}");
         })
-        .AddEndpointFilter<ValidationFilter<CreateTeamDto>>();
+        .AddEndpointFilter<ValidationFilter<Team>>();
 
-        group.MapPut("/{teamId}", async (string teamId, UpdateTeamDto dto, ITeamDelegate teamDelegate) =>
+        group.MapPut("/{teamId}", async (string teamId, Team team, ITeamDelegate teamDelegate) =>
         {
             if (!Ids.IsValid(teamId)) return Results.BadRequest();
 
-            var result = await teamDelegate.UpdateAsync(teamId, new Team { Name = dto.Name });
-            return result.ToHttp(ToDto);
+            var result = await teamDelegate.UpdateAsync(teamId, team);
+            return result.ToHttp();
         })
-        .AddEndpointFilter<ValidationFilter<UpdateTeamDto>>();
+        .AddEndpointFilter<ValidationFilter<Team>>();
 
         group.MapDelete("/{teamId}", async (string teamId, ITeamDelegate teamDelegate) =>
         {
@@ -49,6 +48,4 @@ public static class TeamRoutes
             return result.ToNoContentHttp();
         });
     }
-
-    private static TeamDto ToDto(Team team) => new(team.Id, team.Name);
 }

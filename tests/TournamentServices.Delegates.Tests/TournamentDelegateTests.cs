@@ -51,7 +51,7 @@ public class TournamentDelegateTests
         _tournamentRepository.Verify(r => r.CreateAsync(It.IsAny<Tournament>()), Times.Never);
     }
 
-    // READ-MODIFY-WRITE: lo que no viene en el patch se conserva.
+    // Los campos que no vienen en el patch no se modifican.
     [Fact]
     public async Task PatchAsync_WithNameOnly_KeepsFormat()
     {
@@ -75,7 +75,7 @@ public class TournamentDelegateTests
         Assert.Equal(ErrorKind.Validation, result.Error);
     }
 
-    // GROUPS tiene FK a TOURNAMENTS: hay que borrar matches y groups antes.
+    // Antes de borrar el torneo se borran sus partidos y grupos.
     [Fact]
     public async Task DeleteAsync_RemovesMatchesAndGroupsBeforeTheTournament()
     {

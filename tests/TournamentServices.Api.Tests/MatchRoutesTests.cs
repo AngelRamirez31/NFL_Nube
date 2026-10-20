@@ -1,14 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using TournamentServices.Api.Dtos;
 using Xunit;
 
 namespace TournamentServices.Api.Tests;
 
-// Tests de contrato (código HTTP, Location, forma del JSON) contra ApiFactory.
-// Datos precargados por los fakes: tournament-1 -> group-with-teams ->
-// team-1 (Eagles), team-2 (Cowboys); team-3 (Giants) no está en ningún grupo.
+// Pruebas de las rutas de partidos.
+// Datos de prueba: tournament-1 tiene un grupo con team-1 (Eagles) y team-2 (Cowboys).
+// team-3 (Giants) no está en ningún grupo.
 public class MatchRoutesTests : IClassFixture<ApiFactory>
 {
     private const string Tournament = "/tournaments/tournament-1/matches";
@@ -22,7 +21,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateMatch_WithTeamsInTheSameGroup_Returns201WithLocation()
     {
-        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto("group-with-teams", "team-1", "team-2"));
+        var response = await _client.PostAsJsonAsync(Tournament, new { groupId = "group-with-teams", homeTeamId = "team-1", visitorTeamId = "team-2" });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
@@ -36,7 +35,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateMatch_WithTheSameTeamOnBothSides_Returns422()
     {
-        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto(null, "team-1", "team-1"));
+        var response = await _client.PostAsJsonAsync(Tournament, new { groupId = (string?)null, homeTeamId = "team-1", visitorTeamId = "team-1" });
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
@@ -45,7 +44,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     public async Task CreateMatch_WithTeamOutsideTheTournament_Returns422()
     {
         // team-3 existe pero no pertenece a ningún grupo de tournament-1.
-        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto(null, "team-1", "team-3"));
+        var response = await _client.PostAsJsonAsync(Tournament, new { groupId = (string?)null, homeTeamId = "team-1", visitorTeamId = "team-3" });
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
@@ -53,7 +52,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateMatch_WithUnknownGroup_Returns422()
     {
-        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto("group-9", "team-1", "team-2"));
+        var response = await _client.PostAsJsonAsync(Tournament, new { groupId = "group-9", homeTeamId = "team-1", visitorTeamId = "team-2" });
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
@@ -61,7 +60,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateMatch_WithEmptyTeamId_Returns400()
     {
-        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto(null, "", "team-2"));
+        var response = await _client.PostAsJsonAsync(Tournament, new { groupId = (string?)null, homeTeamId = "", visitorTeamId = "team-2" });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -115,7 +114,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     {
         var location = await CreateMatchAsync();
 
-        var response = await _client.PatchAsJsonAsync($"{location}/score", new UpdateScoreDto(31, 28));
+        var response = await _client.PatchAsJsonAsync($"{location}/score", new { homeTeamScore = 31, visitorTeamScore = 28 });
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -129,19 +128,19 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     {
         var location = await CreateMatchAsync();
 
-        var response = await _client.PatchAsJsonAsync($"{location}/score", new UpdateScoreDto(10, 24));
+        var response = await _client.PatchAsJsonAsync($"{location}/score", new { homeTeamScore = 10, visitorTeamScore = 24 });
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal("VISITOR", body.GetProperty("winner").GetString());
     }
 
-    // Empate = HOME (pendiente de confirmar con el profesor, ver Domain/Score.cs).
+    // En empate gana el equipo local (HOME).
     [Fact]
     public async Task UpdateScore_WhenTied_ReturnsHomeAndIsCompleted()
     {
         var location = await CreateMatchAsync();
 
-        var response = await _client.PatchAsJsonAsync($"{location}/score", new UpdateScoreDto(17, 17));
+        var response = await _client.PatchAsJsonAsync($"{location}/score", new { homeTeamScore = 17, visitorTeamScore = 17 });
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
         Assert.Equal("HOME", body.GetProperty("winner").GetString());
@@ -155,7 +154,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     {
         var location = await CreateMatchAsync();
 
-        var response = await _client.PatchAsJsonAsync($"{location}/score", new UpdateScoreDto(home, visitor));
+        var response = await _client.PatchAsJsonAsync($"{location}/score", new { homeTeamScore = home, visitorTeamScore = visitor });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -163,7 +162,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task UpdateScore_WhenMatchNotFound_Returns404()
     {
-        var response = await _client.PatchAsJsonAsync($"{Tournament}/match-inexistente/score", new UpdateScoreDto(7, 3));
+        var response = await _client.PatchAsJsonAsync($"{Tournament}/match-inexistente/score", new { homeTeamScore = 7, visitorTeamScore = 3 });
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -190,7 +189,7 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
 
     private async Task<string> CreateMatchAsync()
     {
-        var response = await _client.PostAsJsonAsync(Tournament, new CreateMatchDto("group-with-teams", "team-1", "team-2"));
+        var response = await _client.PostAsJsonAsync(Tournament, new { groupId = "group-with-teams", homeTeamId = "team-1", visitorTeamId = "team-2" });
         response.EnsureSuccessStatusCode();
 
         return response.Headers.Location!.ToString();

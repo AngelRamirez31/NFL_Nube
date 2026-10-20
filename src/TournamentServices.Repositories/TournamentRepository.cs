@@ -24,8 +24,7 @@ public class TournamentRepository : ITournamentRepository
 
     public async Task<Tournament?> GetByIdAsync(string id)
     {
-        // Sin este guard, un id que cumple el regex del contrato pero no es UUID
-        // (p. ej. "no-existe") haría que Postgres tirara 22P02 y la ruta 500.
+        // Si el id no es un UUID válido, se trata como no encontrado.
         if (!Guid.TryParse(id, out var tournamentId)) return null;
 
         await using var connection = await _dataSource.OpenConnectionAsync();
