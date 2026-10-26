@@ -11,4 +11,7 @@ public interface ITournamentDelegate
     Task<Result<Tournament>> UpdateAsync(string id, Tournament tournament);
     Task<Result<Tournament>> PatchAsync(string id, string? name, int? numberOfGroups, int? maxTeamsPerGroup, string? type);
     Task<Result<Unit>> DeleteAsync(string id);
+    Task<Result<IReadOnlyList<Match>>> GenerateMatchesAsync(string id);
+    Task<Result<IReadOnlyList<GroupStandings>>> GetStandingsAsync(string id);
+    Task<Result<Team>> GetChampionAsync(string id);
 }

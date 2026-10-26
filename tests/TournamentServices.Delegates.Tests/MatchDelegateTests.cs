@@ -40,6 +40,11 @@ public class MatchDelegateTests
         _matchRepository
             .Setup(r => r.CreateAsync(It.IsAny<Match>()))
             .ReturnsAsync((Match m) => { m.Id = "match-1"; return m; });
+
+        // Por defecto el torneo no tiene otros partidos.
+        _matchRepository
+            .Setup(r => r.GetByTournamentAsync(It.IsAny<string>()))
+            .ReturnsAsync(Array.Empty<Match>());
     }
 
     // ---------- CreateAsync ----------
@@ -169,6 +174,24 @@ public class MatchDelegateTests
         var result = await _delegate.UpdateScoreAsync(TournamentId, "missing", 10, 3);
 
         Assert.Equal(ErrorKind.NotFound, result.Error);   // -> 404
+    }
+
+    // Si ya hay playoffs, los partidos de grupos ya no se pueden modificar.
+    [Fact]
+    public async Task UpdateScoreAsync_WhenPlayoffsAlreadyExist_ReturnsConflict()
+    {
+        var groupMatch = new Match { Id = "match-1", TournamentId = TournamentId, Stage = MatchStage.GROUP };
+        GivenMatchExists(groupMatch);
+        _matchRepository.Setup(r => r.GetByTournamentAsync(TournamentId)).ReturnsAsync(new[]
+        {
+            groupMatch,
+            new Match { Id = "playoff-1", TournamentId = TournamentId, Stage = MatchStage.PLAYOFF, Round = 1 }
+        });
+
+        var result = await _delegate.UpdateScoreAsync(TournamentId, "match-1", 10, 3);
+
+        Assert.Equal(ErrorKind.Conflict, result.Error);   // -> 422
+        _matchRepository.Verify(r => r.UpdateAsync(It.IsAny<string>(), It.IsAny<Match>()), Times.Never);
     }
 
     // ---------- GetByIdAsync / DeleteAsync ----------

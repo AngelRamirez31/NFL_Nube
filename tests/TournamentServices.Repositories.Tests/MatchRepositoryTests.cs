@@ -90,6 +90,35 @@ public class MatchRepositoryTests
         await repository.DeleteAsync(created.Id); // limpieza
     }
 
+    // La fase y la ronda se guardan en el JSONB y se conservan al poner el marcador.
+    [Fact]
+    public async Task CreateAsync_KeepsStageAndRoundAfterUpdatingTheScore()
+    {
+        await using var dataSource = CreateDataSource();
+        var repository = new MatchRepository(dataSource);
+        var tournamentId = NewTournamentId();
+
+        var created = await repository.CreateAsync(new Match
+        {
+            TournamentId = tournamentId,
+            HomeTeamId = "team-1",
+            VisitorTeamId = "team-2",
+            Stage = MatchStage.PLAYOFF,
+            Round = 2
+        });
+
+        created.Score = new Score { HomeTeamScore = 10, VisitorTeamScore = 17 };
+        await repository.UpdateAsync(created.Id, created);
+
+        var found = await repository.GetByIdAsync(tournamentId, created.Id);
+
+        Assert.Equal(MatchStage.PLAYOFF, found!.Stage);
+        Assert.Equal(2, found.Round);
+        Assert.Equal("team-2", found.WinnerTeamId);
+
+        await repository.DeleteAsync(created.Id); // limpieza
+    }
+
     [Fact]
     public async Task GetByTournamentAsync_OnlyReturnsMatchesOfThatTournament()
     {

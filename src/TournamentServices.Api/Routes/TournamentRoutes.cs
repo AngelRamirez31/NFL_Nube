@@ -63,5 +63,32 @@ public static class TournamentRoutes
             var result = await tournamentDelegate.DeleteAsync(tournamentId);
             return result.ToNoContentHttp();
         });
+
+        // Genera los partidos de la siguiente fase (grupos y después playoffs, ronda por ronda).
+        group.MapPost("/{tournamentId}/matches/generate", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
+        {
+            if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
+
+            var result = await tournamentDelegate.GenerateMatchesAsync(tournamentId);
+            return result.ToCreatedHttp(_ => $"/tournaments/{tournamentId}/matches");
+        });
+
+        // Tabla de posiciones de cada grupo.
+        group.MapGet("/{tournamentId}/standings", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
+        {
+            if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
+
+            var result = await tournamentDelegate.GetStandingsAsync(tournamentId);
+            return result.ToHttp();
+        });
+
+        // Campeón del torneo (ganador de la final).
+        group.MapGet("/{tournamentId}/champion", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
+        {
+            if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
+
+            var result = await tournamentDelegate.GetChampionAsync(tournamentId);
+            return result.ToHttp();
+        });
     }
 }

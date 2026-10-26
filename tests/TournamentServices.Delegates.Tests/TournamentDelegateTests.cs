@@ -93,6 +93,128 @@ public class TournamentDelegateTests
         _groupRepository.Verify(r => r.DeleteAsync("group-1"), Times.Once);
     }
 
+    // ---------- GenerateMatchesAsync ----------
+
+    [Fact]
+    public async Task GenerateMatchesAsync_WhenTournamentDoesNotExist_ReturnsNotFound()
+    {
+        _tournamentRepository.Setup(r => r.GetByIdAsync("missing")).ReturnsAsync((Tournament?)null);
+
+        var result = await _delegate.GenerateMatchesAsync("missing");
+
+        Assert.Equal(ErrorKind.NotFound, result.Error);
+    }
+
+    // 2 grupos de 3 equipos: 3 partidos por grupo = 6 partidos.
+    [Fact]
+    public async Task GenerateMatchesAsync_FirstTime_CreatesAllVsAllInEachGroup()
+    {
+        GivenTournamentExists(NewTournament());
+        _groupRepository.Setup(r => r.GetByTournamentAsync(TournamentId)).ReturnsAsync(new[]
+        {
+            NewGroup("group-a", "a1", "a2", "a3"),
+            NewGroup("group-b", "b1", "b2", "b3")
+        });
+        _matchRepository.Setup(r => r.CreateAsync(It.IsAny<Match>())).ReturnsAsync((Match m) => m);
+
+        var result = await _delegate.GenerateMatchesAsync(TournamentId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(6, result.Value!.Count);
+        Assert.All(result.Value, m => Assert.Equal(MatchStage.GROUP, m.Stage));
+        _matchRepository.Verify(r => r.CreateAsync(It.IsAny<Match>()), Times.Exactly(6));
+    }
+
+    [Fact]
+    public async Task GenerateMatchesAsync_WithMatchesWithoutScore_ReturnsConflict()
+    {
+        GivenTournamentExists(NewTournament());
+        _matchRepository.Setup(r => r.GetByTournamentAsync(TournamentId))
+            .ReturnsAsync(new[] { new Match { Id = "match-1", Score = null } });
+
+        var result = await _delegate.GenerateMatchesAsync(TournamentId);
+
+        Assert.Equal(ErrorKind.Conflict, result.Error);
+        _matchRepository.Verify(r => r.CreateAsync(It.IsAny<Match>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GenerateMatchesAsync_WhenAGroupHasLessThanTwoTeams_ReturnsConflict()
+    {
+        GivenTournamentExists(NewTournament());
+        _groupRepository.Setup(r => r.GetByTournamentAsync(TournamentId)).ReturnsAsync(new[]
+        {
+            NewGroup("group-a", "a1", "a2"),
+            NewGroup("group-b", "b1")
+        });
+
+        var result = await _delegate.GenerateMatchesAsync(TournamentId);
+
+        Assert.Equal(ErrorKind.Conflict, result.Error);
+    }
+
+    // El formato dice 2 grupos, pero solo hay 1.
+    [Fact]
+    public async Task GenerateMatchesAsync_WhenGroupsDoNotMatchTheFormat_ReturnsConflict()
+    {
+        GivenTournamentExists(NewTournament());
+        _groupRepository.Setup(r => r.GetByTournamentAsync(TournamentId))
+            .ReturnsAsync(new[] { NewGroup("group-a", "a1", "a2") });
+
+        var result = await _delegate.GenerateMatchesAsync(TournamentId);
+
+        Assert.Equal(ErrorKind.Conflict, result.Error);
+    }
+
+    // ---------- GetChampionAsync ----------
+
+    [Fact]
+    public async Task GetChampionAsync_BeforeTheFinal_ReturnsConflict()
+    {
+        GivenTournamentExists(NewTournament());
+
+        var result = await _delegate.GetChampionAsync(TournamentId);
+
+        Assert.Equal(ErrorKind.Conflict, result.Error);
+    }
+
+    [Fact]
+    public async Task GetChampionAsync_WhenTournamentDoesNotExist_ReturnsNotFound()
+    {
+        _tournamentRepository.Setup(r => r.GetByIdAsync("missing")).ReturnsAsync((Tournament?)null);
+
+        var result = await _delegate.GetChampionAsync("missing");
+
+        Assert.Equal(ErrorKind.NotFound, result.Error);
+    }
+
+    // ---------- GetStandingsAsync ----------
+
+    [Fact]
+    public async Task GetStandingsAsync_ReturnsOneTablePerGroup()
+    {
+        GivenTournamentExists(NewTournament());
+        _groupRepository.Setup(r => r.GetByTournamentAsync(TournamentId)).ReturnsAsync(new[]
+        {
+            NewGroup("group-a", "a1", "a2"),
+            NewGroup("group-b", "b1", "b2")
+        });
+
+        var result = await _delegate.GetStandingsAsync(TournamentId);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value!.Count);
+        Assert.Equal(2, result.Value[0].Standings.Count);
+    }
+
+    private static Group NewGroup(string id, params string[] teamIds) => new()
+    {
+        Id = id,
+        Name = id,
+        TournamentId = TournamentId,
+        Teams = teamIds.Select(t => new Team { Id = t, Name = t }).ToList()
+    };
+
     private static Tournament NewTournament() => new()
     {
         Id = TournamentId,

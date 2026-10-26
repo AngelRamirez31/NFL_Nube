@@ -38,6 +38,21 @@ public class MatchTests
         Assert.Equal(Winner.VISITOR, match.Winner);
     }
 
+    [Fact]
+    public void WinnerTeamId_ReturnsTheIdOfTheWinningTeam()
+    {
+        var pending = new Match { HomeTeamId = "team-1", VisitorTeamId = "team-2" };
+        var played = new Match
+        {
+            HomeTeamId = "team-1",
+            VisitorTeamId = "team-2",
+            Score = new Score { HomeTeamScore = 3, VisitorTeamScore = 10 }
+        };
+
+        Assert.Null(pending.WinnerTeamId);
+        Assert.Equal("team-2", played.WinnerTeamId);
+    }
+
     // En empate gana el equipo local (HOME). Un 0-0 también cuenta como terminado.
     [Fact]
     public void Winner_WhenTied_IsHomeAndMatchIsCompleted()

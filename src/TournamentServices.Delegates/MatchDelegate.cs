@@ -1,5 +1,6 @@
 using TournamentServices.Domain;
 using TournamentServices.Domain.Common;
+using TournamentServices.Domain.Enums;
 using TournamentServices.Repositories;
 
 namespace TournamentServices.Delegates;
@@ -116,6 +117,17 @@ public class MatchDelegate : IMatchDelegate
         if (match is null)
         {
             return Result<Match>.NotFound($"Match {matchId} not found in tournament {tournamentId}");
+        }
+
+        // Si ya se generó la siguiente fase, el marcador ya no se puede cambiar.
+        var matches = await _matchRepository.GetByTournamentAsync(tournamentId);
+        var nextPhaseExists = match.Stage == MatchStage.GROUP
+            ? matches.Any(m => m.Stage == MatchStage.PLAYOFF)
+            : matches.Any(m => m.Stage == MatchStage.PLAYOFF && m.Round > match.Round);
+
+        if (nextPhaseExists)
+        {
+            return Result<Match>.Conflict("The score can't be changed because the next round was already generated");
         }
 
         // Solo se asigna el Score; Winner e IsCompleted se calculan solos.
