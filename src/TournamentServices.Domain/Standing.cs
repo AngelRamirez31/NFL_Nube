@@ -12,4 +12,7 @@ public class Standing
 
     // Puntos anotados menos puntos recibidos.
     public int PointDifference => PointsFor - PointsAgainst;
+
+    // Porcentaje de victorias (como el PCT de la NFL). Sirve para comparar grupos de distinto tamaño.
+    public double WinPercentage => Played == 0 ? 0 : (double)Wins / Played;
 }

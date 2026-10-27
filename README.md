@@ -38,20 +38,28 @@ The development configuration uses PostgreSQL at `localhost:5432`, database `tou
 
 ## How a Tournament Is Played
 
-The rules live in `src/TournamentServices.Domain/TournamentRules.cs`.
+The tournament follows the NFL format. The rules live in `src/TournamentServices.Domain/TournamentRules.cs`.
 
-1. Create the tournament, the teams, and as many groups as `format.numberOfGroups`. Assign at least 2 teams to each group.
-2. `POST /tournaments/{id}/matches/generate` creates the **group stage**: every team plays every other team in its group once.
+Groups work like NFL divisions, and they are split into two conferences. Groups are sorted by name: the first half is the **AFC** and the second half is the **NFC** (with an odd number of groups, the AFC gets one more). Naming the groups `AFC East`, `AFC North`, ..., `NFC West` gives the real NFL layout. `GET /tournaments/{id}/standings` shows the conference of each group.
+
+1. Create the tournament, the teams, and as many groups as `format.numberOfGroups` (at least 2, one per conference). Assign at least 2 teams to each group.
+2. `POST /tournaments/{id}/matches/generate` creates the **group stage** (regular season): every team plays every other team in its group once.
 3. Set each score with `PATCH /tournaments/{id}/matches/{matchId}/score`. Check the table with `GET /tournaments/{id}/standings`.
-4. Call `generate` again to create the **playoffs**. The top 2 teams of each group qualify. Group winners are seeded first, then the runners-up. Seed 1 plays the last seed, seed 2 plays the second-to-last, and so on. The better seed plays at home. If the number of qualified teams is not 2, 4, 8..., the worst seeds are left out.
-5. After each round is played, call `generate` again. The winners are reseeded and play the next round, until the final.
-6. `GET /tournaments/{id}/champion` returns the winner of the final.
+4. Call `generate` again to create the **Wild Card round**. Each conference sends 7 teams to the playoffs:
+   - Seeds 1-4 are the division winners (first place of each group), ordered by record.
+   - Seeds 5-7 are the **wild cards**: the best records among the other teams of the conference, from any group.
+   - Seed 1 gets a **bye** (rests this round). The games are 2 vs 7, 3 vs 6, and 4 vs 5. The better seed plays at home.
+5. After each round is played, call `generate` again. The teams are **reseeded** every round: the best remaining seed plays the worst remaining seed. Each conference plays the **Divisional round** and then the **Conference Championship**.
+6. When the AFC and the NFC have a champion, `generate` creates the **Super Bowl** (`stage: SUPER_BOWL`). The team with the better regular-season record is listed as home.
+7. `GET /tournaments/{id}/champion` returns the winner of the Super Bowl.
+
+With 8 groups of 4 teams (32 teams) the tournament is the same as the real NFL: 14 playoff teams, then 6 Wild Card games, 4 Divisional games, 2 Conference Championships, and the Super Bowl. With smaller tournaments, a conference with fewer than 7 teams sends all of its teams, and the byes are adjusted so the bracket works.
 
 Rules:
 
 - New matches can't be generated while there are matches without a score (`422`).
 - A score can't be changed once the next round has been generated (`422`).
-- Standings are ordered by wins, then point difference, then points scored.
+- Standings are ordered by win percentage, then wins, then point difference, then points scored.
 - A tie counts as a home win.
 
 ## Tests

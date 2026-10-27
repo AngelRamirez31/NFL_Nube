@@ -64,7 +64,7 @@ public static class TournamentRoutes
             return result.ToNoContentHttp();
         });
 
-        // Genera los partidos de la siguiente fase (grupos y después playoffs, ronda por ronda).
+        // Genera los partidos de la siguiente fase (grupos, playoffs ronda por ronda y Super Bowl).
         group.MapPost("/{tournamentId}/matches/generate", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
         {
             if (!Ids.IsValid(tournamentId)) return Results.BadRequest();
@@ -82,7 +82,7 @@ public static class TournamentRoutes
             return result.ToHttp();
         });
 
-        // Campeón del torneo (ganador de la final).
+        // Campeón del torneo (ganador del Super Bowl).
         group.MapGet("/{tournamentId}/champion", async (string tournamentId, ITournamentDelegate tournamentDelegate) =>
         {
             if (!Ids.IsValid(tournamentId)) return Results.BadRequest();

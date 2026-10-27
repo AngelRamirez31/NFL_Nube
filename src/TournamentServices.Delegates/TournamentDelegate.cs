@@ -155,7 +155,8 @@ public class TournamentDelegate : ITournamentDelegate
             : Result<Unit>.NotFound($"Tournament '{id}' was not found.");
     }
 
-    // Genera los partidos de la siguiente fase: primero la fase de grupos y luego cada ronda de playoffs.
+    // Genera los partidos de la siguiente fase: primero la fase de grupos, luego cada ronda
+    // de playoffs por conferencia (AFC y NFC) y al final el Super Bowl.
     public async Task<Result<IReadOnlyList<Match>>> GenerateMatchesAsync(string id)
     {
         var tournament = await _tournamentRepository.GetByIdAsync(id);
@@ -178,6 +179,10 @@ public class TournamentDelegate : ITournamentDelegate
                 return Result<IReadOnlyList<Match>>.Conflict(
                     $"The tournament needs {tournament.Format.NumberOfGroups} groups and has {groups.Count}.");
 
+            // Se necesita al menos un grupo por conferencia (AFC y NFC).
+            if (groups.Count < 2)
+                return Result<IReadOnlyList<Match>>.Conflict("An NFL tournament needs at least 2 groups (one for each conference).");
+
             if (groups.Any(g => g.Teams.Count < 2))
                 return Result<IReadOnlyList<Match>>.Conflict("Every group needs at least 2 teams.");
 
@@ -185,30 +190,12 @@ public class TournamentDelegate : ITournamentDelegate
         }
         else
         {
-            var seeds = TournamentRules.GetPlayoffSeeds(groups, matches);
-            var lastRound = TournamentRules.GetLastPlayoffRound(matches);
+            // Siguiente ronda de playoffs (o el Super Bowl).
+            newMatches = TournamentRules.CreateNextPlayoffRound(id, groups, matches);
 
-            if (lastRound.Count == 0)
-            {
-                // Primera ronda de playoffs con los clasificados de cada grupo.
-                if (seeds.Count < 2)
-                    return Result<IReadOnlyList<Match>>.Conflict("At least 2 teams are needed for the playoffs.");
-
-                newMatches = TournamentRules.CreatePlayoffRound(id, seeds, round: 1);
-            }
-            else if (lastRound.Count == 1)
-            {
-                // Ya se jugó la final.
+            // Si no hay nada que generar es porque ya se jugó el Super Bowl.
+            if (newMatches.Count == 0)
                 return Result<IReadOnlyList<Match>>.Conflict("The tournament is finished. Check the champion.");
-            }
-            else
-            {
-                // Siguiente ronda con los ganadores, ordenados otra vez por sembrado (como en la NFL).
-                var winnerIds = lastRound.Select(m => m.WinnerTeamId).ToList();
-                var nextTeams = seeds.Where(t => winnerIds.Contains(t.Id)).ToList();
-
-                newMatches = TournamentRules.CreatePlayoffRound(id, nextTeams, lastRound[0].Round + 1);
-            }
         }
 
         var created = new List<Match>();
@@ -220,7 +207,7 @@ public class TournamentDelegate : ITournamentDelegate
         return Result<IReadOnlyList<Match>>.Ok(created);
     }
 
-    // Devuelve la tabla de posiciones de cada grupo del torneo.
+    // Devuelve la tabla de posiciones de cada grupo del torneo, con su conferencia.
     public async Task<Result<IReadOnlyList<GroupStandings>>> GetStandingsAsync(string id)
     {
         var tournament = await _tournamentRepository.GetByIdAsync(id);
@@ -230,19 +217,20 @@ public class TournamentDelegate : ITournamentDelegate
         var groups = await _groupRepository.GetByTournamentAsync(id);
         var matches = await _matchRepository.GetByTournamentAsync(id);
 
-        var standings = groups
-            .Select(g => new GroupStandings
+        var standings = TournamentRules.GetConferences(groups)
+            .SelectMany(c => c.Groups.Select(g => new GroupStandings
             {
                 GroupId = g.Id,
                 GroupName = g.Name,
+                Conference = c.Name,
                 Standings = TournamentRules.CalculateStandings(g, matches)
-            })
+            }))
             .ToList();
 
         return Result<IReadOnlyList<GroupStandings>>.Ok(standings);
     }
 
-    // Devuelve el campeón del torneo cuando ya se jugó la final.
+    // Devuelve el campeón del torneo cuando ya se jugó el Super Bowl.
     public async Task<Result<Team>> GetChampionAsync(string id)
     {
         var tournament = await _tournamentRepository.GetByIdAsync(id);

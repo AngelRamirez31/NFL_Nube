@@ -14,6 +14,9 @@ public class Match
     // Ronda de playoffs (1, 2, 3...). En fase de grupos siempre es 1.
     public int Round { get; set; } = 1;
 
+    // Conferencia del partido de playoffs (AFC o NFC). Es null en grupos y en el Super Bowl.
+    public string? Conference { get; set; }
+
     // Es null mientras el partido no tenga marcador.
     public Score? Score { get; set; }
 
@@ -31,6 +34,14 @@ public class Match
     {
         Enums.Winner.HOME => HomeTeamId,
         Enums.Winner.VISITOR => VisitorTeamId,
+        _ => null
+    };
+
+    // Id del equipo que perdió (null si aún no se juega).
+    public string? LoserTeamId => Winner switch
+    {
+        Enums.Winner.HOME => VisitorTeamId,
+        Enums.Winner.VISITOR => HomeTeamId,
         _ => null
     };
 }

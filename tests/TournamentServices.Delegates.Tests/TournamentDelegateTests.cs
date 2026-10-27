@@ -166,6 +166,22 @@ public class TournamentDelegateTests
         Assert.Equal(ErrorKind.Conflict, result.Error);
     }
 
+    // Con un solo grupo no se pueden armar la AFC y la NFC.
+    [Fact]
+    public async Task GenerateMatchesAsync_WithOnlyOneGroup_ReturnsConflict()
+    {
+        var tournament = NewTournament();
+        tournament.Format.NumberOfGroups = 1;
+        GivenTournamentExists(tournament);
+        _groupRepository.Setup(r => r.GetByTournamentAsync(TournamentId))
+            .ReturnsAsync(new[] { NewGroup("group-a", "a1", "a2") });
+
+        var result = await _delegate.GenerateMatchesAsync(TournamentId);
+
+        Assert.Equal(ErrorKind.Conflict, result.Error);
+        _matchRepository.Verify(r => r.CreateAsync(It.IsAny<Match>()), Times.Never);
+    }
+
     // ---------- GetChampionAsync ----------
 
     [Fact]

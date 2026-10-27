@@ -6,7 +6,8 @@ using Xunit;
 namespace TournamentServices.Api.Tests;
 
 // Pruebas de generar partidos, tabla de posiciones y campeón.
-// Se juega un torneo completo por HTTP: 2 grupos de 2 equipos -> semifinales -> final.
+// Se juega un torneo completo por HTTP: 2 grupos de 2 equipos (uno en la AFC y otro en la NFC)
+// -> campeonatos de conferencia -> Super Bowl.
 public class TournamentFlowRoutesTests : IClassFixture<ApiFactory>
 {
     private readonly HttpClient _client;
@@ -29,18 +30,21 @@ public class TournamentFlowRoutesTests : IClassFixture<ApiFactory>
         var standings = await _client.GetAsync($"{baseUrl}/standings");
         Assert.Equal(HttpStatusCode.OK, standings.StatusCode);
 
-        // Semifinales: pasan los 2 equipos de cada grupo.
-        var semifinals = await _client.PostAsync($"{baseUrl}/matches/generate", null);
-        var semifinalsBody = await semifinals.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal(HttpStatusCode.Created, semifinals.StatusCode);
-        Assert.Equal(2, semifinalsBody.GetArrayLength());
-        Assert.Equal("PLAYOFF", semifinalsBody[0].GetProperty("stage").GetString());
+        // Campeonatos de conferencia: en cada conferencia juegan el campeón de división y el comodín.
+        var championships = await _client.PostAsync($"{baseUrl}/matches/generate", null);
+        var championshipsBody = await championships.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(HttpStatusCode.Created, championships.StatusCode);
+        Assert.Equal(2, championshipsBody.GetArrayLength());
+        Assert.Equal("PLAYOFF", championshipsBody[0].GetProperty("stage").GetString());
+        Assert.Equal("AFC", championshipsBody[0].GetProperty("conference").GetString());
 
         await PlayPendingMatchesAsync(baseUrl);
 
-        // Final.
-        var final = await _client.PostAsync($"{baseUrl}/matches/generate", null);
-        Assert.Equal(1, (await final.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength());
+        // Super Bowl.
+        var superBowl = await _client.PostAsync($"{baseUrl}/matches/generate", null);
+        var superBowlBody = await superBowl.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(1, superBowlBody.GetArrayLength());
+        Assert.Equal("SUPER_BOWL", superBowlBody[0].GetProperty("stage").GetString());
 
         var noChampionYet = await _client.GetAsync($"{baseUrl}/champion");
         Assert.Equal(HttpStatusCode.UnprocessableEntity, noChampionYet.StatusCode);
@@ -52,7 +56,7 @@ public class TournamentFlowRoutesTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, champion.StatusCode);
         Assert.False(string.IsNullOrEmpty(championBody.GetProperty("name").GetString()));
 
-        // Con la final jugada ya no se generan más partidos.
+        // Con el Super Bowl jugado ya no se generan más partidos.
         var afterFinal = await _client.PostAsync($"{baseUrl}/matches/generate", null);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, afterFinal.StatusCode);
     }

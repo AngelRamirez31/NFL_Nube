@@ -6,8 +6,8 @@ using Xunit;
 
 namespace TournamentServices.Delegates.Tests;
 
-// Simula un torneo completo con repositorios en memoria:
-// 2 grupos de 3 equipos -> fase de grupos -> semifinales -> final -> campeón.
+// Simula torneos completos con repositorios en memoria:
+// fase de grupos -> playoffs de la AFC y la NFC -> Super Bowl -> campeón.
 public class TournamentFlowTests
 {
     private readonly FakeTournamentRepository _tournaments = new();
@@ -20,6 +20,7 @@ public class TournamentFlowTests
         _delegate = new TournamentDelegate(_tournaments, _groups, _matches);
     }
 
+    // Torneo chico: el grupo A es la AFC y el grupo B es la NFC, con 3 equipos cada uno.
     [Fact]
     public async Task FullTournament_EndsWithAChampion()
     {
@@ -30,31 +31,41 @@ public class TournamentFlowTests
         Assert.True(groupStage.IsSuccess);
         Assert.Equal(6, groupStage.Value!.Count);
 
-        // En grupos gana siempre el local: quedan a1, a2 en el grupo A y b1, b2 en el grupo B.
+        // En grupos gana siempre el local: a1 y b1 ganan su división, los demás entran como comodines.
         await PlayAllAsync(tournamentId, homeWins: true);
 
-        // 2) Semifinales: sembrado 1 contra 4 y 2 contra 3.
-        var semifinals = await _delegate.GenerateMatchesAsync(tournamentId);
-        Assert.True(semifinals.IsSuccess);
-        Assert.Equal(2, semifinals.Value!.Count);
-        Assert.All(semifinals.Value, m => Assert.Equal(MatchStage.PLAYOFF, m.Stage));
-        Assert.Contains(semifinals.Value, m => m.HomeTeamId == "a1" && m.VisitorTeamId == "b2");
-        Assert.Contains(semifinals.Value, m => m.HomeTeamId == "b1" && m.VisitorTeamId == "a2");
+        // 2) Wild Card: el sembrado 1 de cada conferencia descansa y juegan el 2 contra el 3.
+        var wildCard = await _delegate.GenerateMatchesAsync(tournamentId);
+        Assert.True(wildCard.IsSuccess);
+        Assert.Equal(2, wildCard.Value!.Count);
+        Assert.All(wildCard.Value, m => Assert.Equal(MatchStage.PLAYOFF, m.Stage));
+        Assert.Contains(wildCard.Value, m => m.Conference == "AFC" && m.HomeTeamId == "a2" && m.VisitorTeamId == "a3");
+        Assert.Contains(wildCard.Value, m => m.Conference == "NFC" && m.HomeTeamId == "b2" && m.VisitorTeamId == "b3");
 
         await PlayAllAsync(tournamentId, homeWins: true);
 
-        // 3) Final: a1 (local) contra b1.
-        var final = await _delegate.GenerateMatchesAsync(tournamentId);
-        Assert.True(final.IsSuccess);
-        var finalMatch = Assert.Single(final.Value!);
-        Assert.Equal(2, finalMatch.Round);
-        Assert.Equal("a1", finalMatch.HomeTeamId);
-        Assert.Equal("b1", finalMatch.VisitorTeamId);
+        // 3) Campeonatos de conferencia: el sembrado 1 (que descansó) contra el que ganó.
+        var championships = await _delegate.GenerateMatchesAsync(tournamentId);
+        Assert.True(championships.IsSuccess);
+        Assert.Equal(2, championships.Value!.Count);
+        Assert.Contains(championships.Value, m => m.Conference == "AFC" && m.HomeTeamId == "a1" && m.VisitorTeamId == "a2");
+        Assert.Contains(championships.Value, m => m.Conference == "NFC" && m.HomeTeamId == "b1" && m.VisitorTeamId == "b2");
 
-        // Aún no hay campeón porque la final no se ha jugado.
+        await PlayAllAsync(tournamentId, homeWins: true);
+
+        // 4) Super Bowl: campeón de la AFC (a1) contra campeón de la NFC (b1).
+        var superBowl = await _delegate.GenerateMatchesAsync(tournamentId);
+        Assert.True(superBowl.IsSuccess);
+        var superBowlMatch = Assert.Single(superBowl.Value!);
+        Assert.Equal(MatchStage.SUPER_BOWL, superBowlMatch.Stage);
+        Assert.Equal(3, superBowlMatch.Round);
+        Assert.Equal("a1", superBowlMatch.HomeTeamId);
+        Assert.Equal("b1", superBowlMatch.VisitorTeamId);
+
+        // Aún no hay campeón porque el Super Bowl no se ha jugado.
         Assert.Equal(ErrorKind.Conflict, (await _delegate.GetChampionAsync(tournamentId)).Error);
 
-        // En la final gana el visitante.
+        // En el Super Bowl gana el visitante.
         await PlayAllAsync(tournamentId, homeWins: false);
 
         var champion = await _delegate.GetChampionAsync(tournamentId);
@@ -62,8 +73,55 @@ public class TournamentFlowTests
         Assert.Equal("b1", champion.Value!.Id);
 
         // Ya no se pueden generar más partidos.
-        var afterFinal = await _delegate.GenerateMatchesAsync(tournamentId);
-        Assert.Equal(ErrorKind.Conflict, afterFinal.Error);
+        var afterSuperBowl = await _delegate.GenerateMatchesAsync(tournamentId);
+        Assert.Equal(ErrorKind.Conflict, afterSuperBowl.Error);
+    }
+
+    // Igual que la NFL real: 8 divisiones de 4 equipos (32 equipos), 7 por conferencia a playoffs.
+    [Fact]
+    public async Task RealNflTournament_With32Teams_PlaysLikeTheNfl()
+    {
+        var tournament = await _tournaments.CreateAsync(new Tournament
+        {
+            Name = "NFL Season",
+            Format = new TournamentFormat { NumberOfGroups = 8, MaxTeamsPerGroup = 4, Type = TournamentType.NFL }
+        });
+
+        var divisions = new[] { "AFC East", "AFC North", "AFC South", "AFC West", "NFC East", "NFC North", "NFC South", "NFC West" };
+        foreach (var division in divisions)
+        {
+            await _groups.CreateAsync(NewGroup(tournament.Id, division, Enumerable.Range(1, 4).Select(i => $"{division} {i}").ToArray()));
+        }
+
+        // Fase de grupos: 6 partidos por división.
+        Assert.Equal(48, (await _delegate.GenerateMatchesAsync(tournament.Id)).Value!.Count);
+        await PlayAllAsync(tournament.Id, homeWins: true);
+
+        // Wild Card: 3 partidos por conferencia, el sembrado 1 descansa.
+        var wildCard = (await _delegate.GenerateMatchesAsync(tournament.Id)).Value!;
+        Assert.Equal(6, wildCard.Count);
+        Assert.DoesNotContain(wildCard, m => m.HomeTeamId == "AFC East 1" || m.HomeTeamId == "NFC East 1");
+        await PlayAllAsync(tournament.Id, homeWins: true);
+
+        // Divisional: 2 por conferencia. El 1 recibe al peor sembrado que queda (el 4).
+        var divisional = (await _delegate.GenerateMatchesAsync(tournament.Id)).Value!;
+        Assert.Equal(4, divisional.Count);
+        Assert.Contains(divisional, m => m.HomeTeamId == "AFC East 1" && m.VisitorTeamId == "AFC West 1");
+        await PlayAllAsync(tournament.Id, homeWins: true);
+
+        // Campeonatos de conferencia: 1 por conferencia.
+        var championships = (await _delegate.GenerateMatchesAsync(tournament.Id)).Value!;
+        Assert.Equal(2, championships.Count);
+        await PlayAllAsync(tournament.Id, homeWins: true);
+
+        // Super Bowl.
+        var superBowl = Assert.Single((await _delegate.GenerateMatchesAsync(tournament.Id)).Value!);
+        Assert.Equal(MatchStage.SUPER_BOWL, superBowl.Stage);
+        Assert.Equal(("AFC East 1", "NFC East 1"), (superBowl.HomeTeamId, superBowl.VisitorTeamId));
+        await PlayAllAsync(tournament.Id, homeWins: true);
+
+        var champion = await _delegate.GetChampionAsync(tournament.Id);
+        Assert.Equal("AFC East 1", champion.Value!.Id);
     }
 
     [Fact]

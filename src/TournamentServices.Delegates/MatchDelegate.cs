@@ -122,8 +122,8 @@ public class MatchDelegate : IMatchDelegate
         // Si ya se generó la siguiente fase, el marcador ya no se puede cambiar.
         var matches = await _matchRepository.GetByTournamentAsync(tournamentId);
         var nextPhaseExists = match.Stage == MatchStage.GROUP
-            ? matches.Any(m => m.Stage == MatchStage.PLAYOFF)
-            : matches.Any(m => m.Stage == MatchStage.PLAYOFF && m.Round > match.Round);
+            ? matches.Any(m => m.Stage != MatchStage.GROUP)
+            : matches.Any(m => m.Stage != MatchStage.GROUP && m.Round > match.Round);
 
         if (nextPhaseExists)
         {

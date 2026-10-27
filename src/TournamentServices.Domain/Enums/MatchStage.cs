@@ -4,5 +4,6 @@ namespace TournamentServices.Domain.Enums;
 public enum MatchStage
 {
     GROUP,
-    PLAYOFF
+    PLAYOFF,
+    SUPER_BOWL
 }
