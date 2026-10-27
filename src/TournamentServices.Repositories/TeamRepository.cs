@@ -8,11 +8,13 @@ public class TeamRepository : ITeamRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
+    // Recibe la conexión a la base de datos.
     public TeamRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
     }
 
+    // Regresa todos los equipos.
     public async Task<IReadOnlyList<Team>> GetAllAsync()
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -20,6 +22,7 @@ public class TeamRepository : ITeamRepository
         return rows.Select(ToTeam).ToList();
     }
 
+    // Busca un equipo por su id.
     public async Task<Team?> GetByIdAsync(string id)
     {
         if (!Guid.TryParse(id, out var teamId)) return null;
@@ -31,6 +34,7 @@ public class TeamRepository : ITeamRepository
         return row is null ? null : ToTeam(row);
     }
 
+    // Guarda un equipo nuevo y le pone el id que genera la base.
     public async Task<Team> CreateAsync(Team team)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -44,6 +48,7 @@ public class TeamRepository : ITeamRepository
         return team;
     }
 
+    // Actualiza los datos de un equipo.
     public async Task<Team?> UpdateAsync(string id, Team team)
     {
         if (!Guid.TryParse(id, out var teamId)) return null;
@@ -62,6 +67,7 @@ public class TeamRepository : ITeamRepository
         return updatedId is null ? null : team;
     }
 
+    // Borra un equipo por su id.
     public async Task<bool> DeleteAsync(string id)
     {
         if (!Guid.TryParse(id, out var teamId)) return false;
@@ -71,6 +77,7 @@ public class TeamRepository : ITeamRepository
         return affected > 0;
     }
 
+    // Revisa si ya existe un equipo con ese nombre.
     public async Task<bool> ExistsByNameAsync(string name)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -79,6 +86,7 @@ public class TeamRepository : ITeamRepository
         return id is not null;
     }
 
+    // Convierte una fila de la base a un Team.
     private static Team ToTeam(TeamRow row)
     {
         var team = DocumentSerializer.From<Team>(row.Document);
@@ -86,5 +94,6 @@ public class TeamRepository : ITeamRepository
         return team;
     }
 
+    // Fila tal como viene de la tabla TEAMS.
     private record TeamRow(Guid Id, string Document);
 }

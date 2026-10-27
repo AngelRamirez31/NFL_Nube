@@ -1,5 +1,6 @@
 namespace TournamentServices.Domain;
 
+// Partido entre dos equipos: local y visitante.
 public class Match
 {
     public string Id { get; set; } = string.Empty;

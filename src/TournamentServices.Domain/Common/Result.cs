@@ -12,11 +12,16 @@ public enum ErrorKind
 
 public sealed record Result<T>(T? Value, ErrorKind Error, string? Message)
 {
+    // Es true cuando no hubo ningún error.
     public bool IsSuccess => Error == ErrorKind.None;
 
+    // Operación exitosa con su valor.
     public static Result<T> Ok(T value) => new(value, ErrorKind.None, null);
+    // No se encontró lo que se buscaba.
     public static Result<T> NotFound(string message) => new(default, ErrorKind.NotFound, message);
+    // La operación choca con una regla del torneo.
     public static Result<T> Conflict(string message) => new(default, ErrorKind.Conflict, message);
+    // Los datos que llegaron no son válidos.
     public static Result<T> Invalid(string message) => new(default, ErrorKind.Validation, message);
 }
 

@@ -10,11 +10,13 @@ public class MatchRepository : IMatchRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
+    // Recibe la conexión a la base de datos.
     public MatchRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
     }
 
+    // Regresa los partidos de un torneo.
     public async Task<IReadOnlyList<Match>> GetByTournamentAsync(string tournamentId)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -25,6 +27,7 @@ public class MatchRepository : IMatchRepository
         return rows.Select(ToMatch).ToList();
     }
 
+    // Busca un partido por su id dentro del torneo.
     public async Task<Match?> GetByIdAsync(string tournamentId, string matchId)
     {
         if (!Guid.TryParse(matchId, out var id)) return null;
@@ -37,6 +40,7 @@ public class MatchRepository : IMatchRepository
         return row is null ? null : ToMatch(row);
     }
 
+    // Guarda un partido nuevo y le pone el id que genera la base.
     public async Task<Match> CreateAsync(Match match)
     {
         await using var connection = await _dataSource.OpenConnectionAsync();
@@ -50,6 +54,7 @@ public class MatchRepository : IMatchRepository
         return match;
     }
 
+    // Actualiza solo el marcador del partido.
     public async Task<Match?> UpdateAsync(string matchId, Match match)
     {
         if (!Guid.TryParse(matchId, out var id)) return null;
@@ -71,6 +76,7 @@ public class MatchRepository : IMatchRepository
         return match;
     }
 
+    // Borra un partido por su id.
     public async Task<bool> DeleteAsync(string matchId)
     {
         if (!Guid.TryParse(matchId, out var id)) return false;
@@ -80,6 +86,7 @@ public class MatchRepository : IMatchRepository
         return affected > 0;
     }
 
+    // Convierte una fila de la base a un Match.
     private static Match ToMatch(MatchRow row)
     {
         var match = DocumentSerializer.From<Match>(row.Document);
@@ -87,5 +94,6 @@ public class MatchRepository : IMatchRepository
         return match;
     }
 
+    // Fila tal como viene de la tabla MATCHES.
     private record MatchRow(Guid Id, string Document);
 }

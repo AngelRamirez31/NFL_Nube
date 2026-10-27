@@ -8,11 +8,13 @@ public class GroupRepository : IGroupRepository
 {
     private readonly NpgsqlDataSource _dataSource;
 
+    // Recibe la conexión a la base de datos.
     public GroupRepository(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
     }
 
+    // Regresa los grupos de un torneo.
     public async Task<IReadOnlyList<Group>> GetByTournamentAsync(string tournamentId)
     {
         if (!Guid.TryParse(tournamentId, out var parsedTournamentId))
@@ -31,6 +33,7 @@ public class GroupRepository : IGroupRepository
         return rows.Select(ToGroup).ToList();
     }
 
+    // Busca un grupo por su id dentro del torneo.
     public async Task<Group?> GetByIdAsync(string tournamentId, string groupId)
     {
         if (!Guid.TryParse(tournamentId, out var parsedTournamentId))
@@ -57,6 +60,7 @@ public class GroupRepository : IGroupRepository
         return row is null ? null : ToGroup(row);
     }
 
+    // Guarda un grupo nuevo y le pone el id que genera la base.
     public async Task<Group> CreateAsync(Group group)
     {
         if (!Guid.TryParse(group.TournamentId, out var tournamentId))
@@ -88,6 +92,7 @@ public class GroupRepository : IGroupRepository
         return group;
     }
 
+    // Actualiza el grupo (nombre y equipos).
     public async Task<Group?> UpdateAsync(string groupId, Group group)
     {
         if (!Guid.TryParse(groupId, out var parsedGroupId))
@@ -123,6 +128,7 @@ public class GroupRepository : IGroupRepository
         return updatedId is null ? null : group;
     }
 
+    // Borra un grupo por su id.
     public async Task<bool> DeleteAsync(string groupId)
     {
         if (!Guid.TryParse(groupId, out var parsedGroupId))
@@ -140,6 +146,7 @@ public class GroupRepository : IGroupRepository
         return affected > 0;
     }
 
+    // Revisa si ya hay un grupo con ese nombre en el torneo.
     public async Task<bool> ExistsByNameInTournamentAsync(
         string tournamentId,
         string name)
@@ -166,6 +173,7 @@ public class GroupRepository : IGroupRepository
         return result is not null;
     }
 
+    // Busca el grupo del torneo donde está el equipo (busca dentro del JSONB).
     public async Task<Group?> FindByTournamentAndTeamAsync(
         string tournamentId,
         string teamId)
@@ -202,6 +210,7 @@ public class GroupRepository : IGroupRepository
         return row is null ? null : ToGroup(row);
     }
 
+    // Convierte una fila de la base a un Group.
     private static Group ToGroup(GroupRow row)
     {
         var group = DocumentSerializer.From<Group>(row.Document);
@@ -213,6 +222,7 @@ public class GroupRepository : IGroupRepository
         return group;
     }
 
+    // Arma el JSON del grupo que se guarda en la base.
     private static string ToDocument(Group group)
     {
         return DocumentSerializer.To(new
@@ -223,6 +233,7 @@ public class GroupRepository : IGroupRepository
         });
     }
 
+    // Fila tal como viene de la tabla GROUPS.
     private sealed record GroupRow(
         Guid Id,
         Guid TournamentId,

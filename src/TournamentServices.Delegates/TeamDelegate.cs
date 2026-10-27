@@ -9,17 +9,20 @@ public class TeamDelegate : ITeamDelegate
 {
     private readonly ITeamRepository _teamRepository;
 
+    // Recibe el repositorio de equipos.
     public TeamDelegate(ITeamRepository teamRepository)
     {
         _teamRepository = teamRepository;
     }
 
+    // Regresa todos los equipos.
     public async Task<Result<IReadOnlyList<Team>>> GetAllAsync()
     {
         var teams = await _teamRepository.GetAllAsync();
         return Result<IReadOnlyList<Team>>.Ok(teams);
     }
 
+    // Busca un equipo por su id.
     public async Task<Result<Team>> GetByIdAsync(string id)
     {
         var team = await _teamRepository.GetByIdAsync(id);
@@ -28,6 +31,7 @@ public class TeamDelegate : ITeamDelegate
             : Result<Team>.Ok(team);
     }
 
+    // Crea un equipo si tiene nombre y no está repetido.
     public async Task<Result<Team>> CreateAsync(Team team)
     {
         if (string.IsNullOrWhiteSpace(team.Name))
@@ -48,6 +52,7 @@ public class TeamDelegate : ITeamDelegate
         }
     }
 
+    // Actualiza un equipo si tiene nombre y existe.
     public async Task<Result<Team>> UpdateAsync(string id, Team team)
     {
         if (string.IsNullOrWhiteSpace(team.Name))
@@ -59,6 +64,7 @@ public class TeamDelegate : ITeamDelegate
             : Result<Team>.Ok(updated);
     }
 
+    // Borra un equipo por su id.
     public async Task<Result<Unit>> DeleteAsync(string id)
     {
         var deleted = await _teamRepository.DeleteAsync(id);

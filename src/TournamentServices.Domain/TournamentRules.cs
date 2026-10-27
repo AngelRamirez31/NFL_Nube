@@ -8,6 +8,7 @@ public static class TournamentRules
     // Como en la NFL: 7 equipos por conferencia (campeones de división + comodines).
     public const int PlayoffTeamsPerConference = 7;
 
+    // Nombres de las dos conferencias.
     public const string Afc = "AFC";
     public const string Nfc = "NFC";
 

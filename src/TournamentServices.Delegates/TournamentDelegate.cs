@@ -12,6 +12,7 @@ public class TournamentDelegate : ITournamentDelegate
     private readonly IGroupRepository _groupRepository;
     private readonly IMatchRepository _matchRepository;
 
+    // Recibe los repositorios de torneos, grupos y partidos.
     public TournamentDelegate(
         ITournamentRepository tournamentRepository,
         IGroupRepository groupRepository,
@@ -22,12 +23,14 @@ public class TournamentDelegate : ITournamentDelegate
         _matchRepository = matchRepository;
     }
 
+    // Regresa todos los torneos.
     public async Task<Result<IReadOnlyList<Tournament>>> GetAllAsync()
     {
         var tournaments = await _tournamentRepository.GetAllAsync();
         return Result<IReadOnlyList<Tournament>>.Ok(tournaments);
     }
 
+    // Busca un torneo por su id y le carga sus grupos y partidos.
     public async Task<Result<Tournament>> GetByIdAsync(string id)
     {
         var tournament = await _tournamentRepository.GetByIdAsync(id);
@@ -53,6 +56,7 @@ public class TournamentDelegate : ITournamentDelegate
         return Result<Tournament>.Ok(tournament);
     }
 
+    // Crea un torneo después de validar sus datos.
     public async Task<Result<Tournament>> CreateAsync(Tournament tournament)
     {
         var invalid = Validate(tournament);
@@ -69,6 +73,7 @@ public class TournamentDelegate : ITournamentDelegate
         }
     }
 
+    // Reemplaza los datos de un torneo después de validarlos.
     public async Task<Result<Tournament>> UpdateAsync(string id, Tournament tournament)
     {
         var invalid = Validate(tournament);
@@ -246,6 +251,7 @@ public class TournamentDelegate : ITournamentDelegate
             : Result<Team>.Ok(champion);
     }
 
+    // Revisa que el torneo tenga nombre y números válidos. Regresa null si todo está bien.
     private static Result<Tournament>? Validate(Tournament tournament)
     {
         if (string.IsNullOrWhiteSpace(tournament.Name))

@@ -1,5 +1,6 @@
 namespace TournamentServices.Domain;
 
+// Torneo con su formato, sus grupos y sus partidos.
 public class Tournament
 {
     public string Id { get; set; } = string.Empty;

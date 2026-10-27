@@ -10,6 +10,7 @@ public class MatchDelegate : IMatchDelegate
     private readonly ITeamRepository _teamRepository;
     private readonly IGroupRepository _groupRepository;
 
+    // Recibe los repositorios de partidos, equipos y grupos.
     public MatchDelegate(
         IMatchRepository matchRepository,
         ITeamRepository teamRepository,
@@ -20,6 +21,7 @@ public class MatchDelegate : IMatchDelegate
         _groupRepository = groupRepository;
     }
 
+    // Regresa los partidos del torneo con los nombres de sus equipos.
     public async Task<Result<IReadOnlyList<Match>>> GetByTournamentAsync(string tournamentId)
     {
         var matches = await _matchRepository.GetByTournamentAsync(tournamentId);
@@ -32,6 +34,7 @@ public class MatchDelegate : IMatchDelegate
         return Result<IReadOnlyList<Match>>.Ok(matches);
     }
 
+    // Busca un partido por su id dentro del torneo.
     public async Task<Result<Match>> GetByIdAsync(string tournamentId, string matchId)
     {
         var match = await _matchRepository.GetByIdAsync(tournamentId, matchId);
@@ -44,6 +47,7 @@ public class MatchDelegate : IMatchDelegate
         return Result<Match>.Ok(match);
     }
 
+    // Crea un partido. Los equipos deben ser distintos, existir y estar en el torneo.
     public async Task<Result<Match>> CreateAsync(string tournamentId, string? groupId, string homeTeamId, string visitorTeamId)
     {
         if (string.Equals(homeTeamId, visitorTeamId, StringComparison.Ordinal))
@@ -106,6 +110,7 @@ public class MatchDelegate : IMatchDelegate
         return Result<Match>.Ok(created);
     }
 
+    // Guarda el marcador de un partido.
     public async Task<Result<Match>> UpdateScoreAsync(string tournamentId, string matchId, int homeScore, int visitorScore)
     {
         if (homeScore < 0 || visitorScore < 0)
@@ -149,6 +154,7 @@ public class MatchDelegate : IMatchDelegate
         return Result<Match>.Ok(updated);
     }
 
+    // Borra un partido si existe en el torneo.
     public async Task<Result<Unit>> DeleteAsync(string tournamentId, string matchId)
     {
         var match = await _matchRepository.GetByIdAsync(tournamentId, matchId);

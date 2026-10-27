@@ -17,8 +17,10 @@ public static class DocumentSerializer
         TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { IgnoreHydratedProperties } },
     };
 
+    // Convierte un objeto a texto JSON.
     public static string To<T>(T entity) => JsonSerializer.Serialize(entity, Options);
 
+    // Convierte texto JSON a un objeto.
     public static T From<T>(string document) => JsonSerializer.Deserialize<T>(document, Options)!;
 
     // Estas propiedades no se guardan en el JSONB porque viven en otras tablas.
@@ -28,6 +30,7 @@ public static class DocumentSerializer
         [typeof(Match)] = [nameof(Match.HomeTeam), nameof(Match.VisitorTeam)],
     };
 
+    // Quita del JSON las propiedades de la lista de arriba.
     private static void IgnoreHydratedProperties(JsonTypeInfo typeInfo)
     {
         if (!HydratedProperties.TryGetValue(typeInfo.Type, out var ignored)) return;

@@ -11,6 +11,7 @@ public class GroupDelegate : IGroupDelegate
     private readonly ITeamRepository _teamRepository;
     private readonly ITournamentRepository _tournamentRepository;
 
+    // Recibe los repositorios de grupos, equipos y torneos.
     public GroupDelegate(
         IGroupRepository groupRepository,
         ITeamRepository teamRepository,
@@ -21,6 +22,7 @@ public class GroupDelegate : IGroupDelegate
         _tournamentRepository = tournamentRepository;
     }
 
+    // Regresa todos los grupos de un torneo.
     public async Task<Result<IReadOnlyList<Group>>> GetByTournamentAsync(
         string tournamentId)
     {
@@ -29,6 +31,7 @@ public class GroupDelegate : IGroupDelegate
         return Result<IReadOnlyList<Group>>.Ok(groups);
     }
 
+    // Busca un grupo por su id dentro del torneo.
     public async Task<Result<Group>> GetByIdAsync(
         string tournamentId,
         string groupId)
@@ -43,6 +46,8 @@ public class GroupDelegate : IGroupDelegate
             : Result<Group>.Ok(group);
     }
 
+    // Crea un grupo. Revisa que tenga nombre, que exista el torneo
+    // y que no haya otro grupo con el mismo nombre.
     public async Task<Result<Group>> CreateAsync(
         string tournamentId,
         string name)
@@ -93,6 +98,7 @@ public class GroupDelegate : IGroupDelegate
         }
     }
 
+    // Cambia el nombre de un grupo, revisando que el nuevo nombre no esté repetido.
     public async Task<Result<Group>> UpdateAsync(
         string tournamentId,
         string groupId,
@@ -147,6 +153,7 @@ public class GroupDelegate : IGroupDelegate
         }
     }
 
+    // Borra un grupo si existe en el torneo.
     public async Task<Result<Unit>> DeleteAsync(
         string tournamentId,
         string groupId)
@@ -169,6 +176,8 @@ public class GroupDelegate : IGroupDelegate
                 $"Group '{groupId}' was not found in tournament '{tournamentId}'.");
     }
 
+    // Agrega equipos a un grupo. Revisa que no vengan repetidos, que existan,
+    // que no estén ya en otro grupo y que no se pase del máximo por grupo.
     public async Task<Result<Unit>> AssignTeamsAsync(
         string tournamentId,
         string groupId,
@@ -256,6 +265,7 @@ public class GroupDelegate : IGroupDelegate
         return Result<Unit>.Ok(Unit.Value);
     }
 
+    // Deja el id en el mismo formato para poder compararlo.
     private static string NormalizeId(string id)
     {
         if (Guid.TryParse(id, out var parsed))
