@@ -15,11 +15,11 @@ public class ScoreTests
     }
 
     [Fact]
-    public void GetWinner_WhenHomeScoresMoreOrTies_ReturnsHome()
+    public void GetWinner_WhenBothScoreTheSame_ReturnsTie()
     {
         var score = new Score { HomeTeamScore = 14, VisitorTeamScore = 14 };
 
-        Assert.Equal(Winner.HOME, score.GetWinner());
+        Assert.Equal(Winner.TIE, score.GetWinner());
     }
 
     [Fact]
@@ -31,11 +31,11 @@ public class ScoreTests
     }
 
     [Fact]
-    public void GetWinner_WhenScorelessDraw_ReturnsHome()
+    public void GetWinner_WhenScorelessDraw_ReturnsTie()
     {
         var score = new Score { HomeTeamScore = 0, VisitorTeamScore = 0 };
 
-        Assert.Equal(Winner.HOME, score.GetWinner());
+        Assert.Equal(Winner.TIE, score.GetWinner());
     }
 
     [Theory]

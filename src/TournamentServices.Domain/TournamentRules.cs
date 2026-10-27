@@ -62,10 +62,15 @@ public static class TournamentRules
                 home.Wins++;
                 visitor.Losses++;
             }
-            else
+            else if (match.Winner == Winner.VISITOR)
             {
                 visitor.Wins++;
                 home.Losses++;
+            }
+            else
+            {
+                home.Ties++;
+                visitor.Ties++;
             }
         }
 

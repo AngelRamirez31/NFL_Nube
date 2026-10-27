@@ -142,16 +142,30 @@ public class MatchDelegateTests
         Assert.Equal(Winner.VISITOR, result.Value!.Winner);
     }
 
-    // En empate gana el equipo local (HOME).
+    // En la fase de grupos se permite el empate.
     [Fact]
-    public async Task UpdateScoreAsync_WhenTied_ReturnsHomeAndIsCompleted()
+    public async Task UpdateScoreAsync_WhenTiedInGroupStage_ReturnsTieAndIsCompleted()
     {
-        GivenMatchExists(new Match { Id = "match-1", TournamentId = TournamentId });
+        GivenMatchExists(new Match { Id = "match-1", TournamentId = TournamentId, Stage = MatchStage.GROUP });
 
         var result = await _delegate.UpdateScoreAsync(TournamentId, "match-1", 20, 20);
 
-        Assert.Equal(Winner.HOME, result.Value!.Winner);
+        Assert.Equal(Winner.TIE, result.Value!.Winner);
         Assert.True(result.Value.IsCompleted);
+    }
+
+    // En playoffs y Super Bowl no hay empates: el tiempo extra decide al ganador.
+    [Theory]
+    [InlineData(MatchStage.PLAYOFF)]
+    [InlineData(MatchStage.SUPER_BOWL)]
+    public async Task UpdateScoreAsync_WhenTiedInPlayoffs_ReturnsConflict(MatchStage stage)
+    {
+        GivenMatchExists(new Match { Id = "match-1", TournamentId = TournamentId, Stage = stage, Round = 1 });
+
+        var result = await _delegate.UpdateScoreAsync(TournamentId, "match-1", 20, 20);
+
+        Assert.Equal(ErrorKind.Conflict, result.Error);   // -> 422
+        _matchRepository.Verify(r => r.UpdateAsync(It.IsAny<string>(), It.IsAny<Match>()), Times.Never);
     }
 
     [Theory]

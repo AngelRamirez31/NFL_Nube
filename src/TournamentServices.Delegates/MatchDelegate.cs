@@ -119,6 +119,12 @@ public class MatchDelegate : IMatchDelegate
             return Result<Match>.NotFound($"Match {matchId} not found in tournament {tournamentId}");
         }
 
+        // En playoffs y Super Bowl no hay empates: el tiempo extra decide al ganador (como en la NFL).
+        if (match.Stage != MatchStage.GROUP && homeScore == visitorScore)
+        {
+            return Result<Match>.Conflict("Playoff games can't end in a tie. Overtime decides the winner");
+        }
+
         // Si ya se generó la siguiente fase, el marcador ya no se puede cambiar.
         var matches = await _matchRepository.GetByTournamentAsync(tournamentId);
         var nextPhaseExists = match.Stage == MatchStage.GROUP

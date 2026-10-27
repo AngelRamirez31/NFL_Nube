@@ -29,7 +29,7 @@ public class Match
     public bool IsCompleted => Score is not null;
     public Enums.Winner? Winner => Score?.GetWinner();
 
-    // Id del equipo ganador (null si aún no se juega).
+    // Id del equipo ganador (null si aún no se juega o si fue empate).
     public string? WinnerTeamId => Winner switch
     {
         Enums.Winner.HOME => HomeTeamId,
@@ -37,7 +37,7 @@ public class Match
         _ => null
     };
 
-    // Id del equipo que perdió (null si aún no se juega).
+    // Id del equipo que perdió (null si aún no se juega o si fue empate).
     public string? LoserTeamId => Winner switch
     {
         Enums.Winner.HOME => VisitorTeamId,

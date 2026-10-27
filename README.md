@@ -15,14 +15,15 @@ A REST API for managing American football tournaments, including teams, tourname
 ## Requirements
 
 - .NET SDK 10.
-- Docker or Podman to run PostgreSQL.
+- Podman to run PostgreSQL.
 
 ## Run Locally
 
 1. Start the database from the project root:
 
    ```powershell
-   docker compose up -d
+   podman machine start
+   podman compose up -d
    ```
 
 2. Restore dependencies and run the API:
@@ -59,8 +60,9 @@ Rules:
 
 - New matches can't be generated while there are matches without a score (`422`).
 - A score can't be changed once the next round has been generated (`422`).
+- Group stage games can end in a tie (`winner: TIE`). A tie counts as half a win: win percentage = (wins + 0.5 × ties) / games played.
+- Playoff and Super Bowl games can't end in a tie, because overtime decides the winner (`422`).
 - Standings are ordered by win percentage, then wins, then point difference, then points scored.
-- A tie counts as a home win.
 
 ## Tests
 

@@ -134,16 +134,17 @@ public class MatchRoutesTests : IClassFixture<ApiFactory>
         Assert.Equal("VISITOR", body.GetProperty("winner").GetString());
     }
 
-    // En empate gana el equipo local (HOME).
+    // Un partido de grupos puede quedar empatado: no hay ganador.
     [Fact]
-    public async Task UpdateScore_WhenTied_ReturnsHomeAndIsCompleted()
+    public async Task UpdateScore_WhenTied_ReturnsTieAndIsCompleted()
     {
         var location = await CreateMatchAsync();
 
         var response = await _client.PatchAsJsonAsync($"{location}/score", new { homeTeamScore = 17, visitorTeamScore = 17 });
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
 
-        Assert.Equal("HOME", body.GetProperty("winner").GetString());
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("TIE", body.GetProperty("winner").GetString());
         Assert.True(body.GetProperty("isCompleted").GetBoolean());
     }
 

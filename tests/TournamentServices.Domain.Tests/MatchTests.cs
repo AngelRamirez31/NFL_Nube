@@ -53,13 +53,20 @@ public class MatchTests
         Assert.Equal("team-2", played.WinnerTeamId);
     }
 
-    // En empate gana el equipo local (HOME). Un 0-0 también cuenta como terminado.
+    // Un empate no tiene ganador ni perdedor. Un 0-0 también cuenta como terminado.
     [Fact]
-    public void Winner_WhenTied_IsHomeAndMatchIsCompleted()
+    public void Winner_WhenTied_IsTieAndMatchIsCompleted()
     {
-        var match = new Match { Score = new Score { HomeTeamScore = 0, VisitorTeamScore = 0 } };
+        var match = new Match
+        {
+            HomeTeamId = "team-1",
+            VisitorTeamId = "team-2",
+            Score = new Score { HomeTeamScore = 0, VisitorTeamScore = 0 }
+        };
 
-        Assert.Equal(Winner.HOME, match.Winner);
+        Assert.Equal(Winner.TIE, match.Winner);
+        Assert.Null(match.WinnerTeamId);
+        Assert.Null(match.LoserTeamId);
         Assert.True(match.IsCompleted);
     }
 }

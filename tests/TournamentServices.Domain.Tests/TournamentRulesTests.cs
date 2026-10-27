@@ -81,6 +81,32 @@ public class TournamentRulesTests
         Assert.Equal(new[] { "t1", "t3", "t2" }, standings.Select(s => s.Team.Id));
     }
 
+    // Un empate suma a los dos equipos y vale media victoria en el porcentaje.
+    [Fact]
+    public void CalculateStandings_Tie_CountsAsHalfAWin()
+    {
+        var group = NewGroup("group-a", "t1", "t2", "t3");
+        var matches = new[]
+        {
+            Played("t1", "t2", 17, 17),  // empate
+            Played("t1", "t3", 21, 0),   // t1 gana
+            Played("t2", "t3", 0, 21)    // t3 gana
+        };
+
+        var standings = TournamentRules.CalculateStandings(group, matches);
+
+        var t1 = standings.Single(s => s.Team.Id == "t1");
+        Assert.Equal((1, 0, 1), (t1.Wins, t1.Losses, t1.Ties));
+        Assert.Equal(0.75, t1.WinPercentage);   // (1 + 0.5) / 2
+
+        var t2 = standings.Single(s => s.Team.Id == "t2");
+        Assert.Equal((0, 1, 1), (t2.Wins, t2.Losses, t2.Ties));
+        Assert.Equal(0.25, t2.WinPercentage);   // (0 + 0.5) / 2
+
+        // t1 (0.75) queda arriba de t3 (1-1 = 0.50) y t2 (0.25) queda último.
+        Assert.Equal(new[] { "t1", "t3", "t2" }, standings.Select(s => s.Team.Id));
+    }
+
     // Los partidos sin marcador y los de playoffs no cuentan para la tabla.
     [Fact]
     public void CalculateStandings_IgnoresPendingAndPlayoffMatches()
